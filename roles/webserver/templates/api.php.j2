@@ -85,17 +85,20 @@ function checkDatabaseConnection() {
 function checkServices() {
     $services = [];
     
-    // Check Apache
-    $apache_status = shell_exec('systemctl is-active httpd 2>/dev/null') ?: 'unknown';
-    $services['apache'] = ['status' => trim($apache_status)];
+    // Helper closure
+    $detect = function($unit, $processName) {
+        $status = trim(shell_exec("systemctl is-active $unit 2>/dev/null"));
+        if ($status === '' || $status === 'unknown') {
+            // Fallback: check if process is running
+            $pid = trim(shell_exec("pgrep -x $processName"));
+            $status = $pid !== '' ? 'running' : 'stopped';
+        }
+        return $status;
+    };
     
-    // Check Nginx
-    $nginx_status = shell_exec('systemctl is-active nginx 2>/dev/null') ?: 'unknown';
-    $services['nginx'] = ['status' => trim($nginx_status)];
-    
-    // Check MariaDB
-    $mariadb_status = shell_exec('systemctl is-active mariadb 2>/dev/null') ?: 'unknown';
-    $services['mariadb'] = ['status' => trim($mariadb_status)];
+    $services['apache']  = ['status' => $detect('httpd','httpd')];
+    $services['nginx']   = ['status' => $detect('nginx','nginx')];
+    $services['mariadb'] = ['status' => $detect('mariadb','mysqld')];
     
     return $services;
 }
