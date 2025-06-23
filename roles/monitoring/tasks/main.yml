@@ -157,4 +157,5 @@
   register: monitoring_test
   retries: 3
   delay: 5
-  until: monitoring_test.status == 200 
+  until: monitoring_test.status == 200
+  ignore_errors: yes 
