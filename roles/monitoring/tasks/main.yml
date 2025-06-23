@@ -133,6 +133,14 @@
   debug:
     msg: "Performance baseline completed: {{ baseline_result.stdout_lines }}"
 
+- name: Create monitoring API directory
+  file:
+    path: /var/www/html/{{ app_name }}/api
+    state: directory
+    owner: apache
+    group: apache
+    mode: '0755'
+
 - name: Create monitoring API endpoint
   template:
     src: monitoring_api.php.j2
