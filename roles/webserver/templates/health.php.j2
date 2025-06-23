@@ -40,19 +40,19 @@ try {
 
 // Check file system
 $required_dirs = [
-    '/var/www/html/{{ app_name }}',
-    '/opt/{{ app_name }}',
-    '/var/log/{{ app_name }}'
+    'web_root' => '/var/www/html/{{ app_name }}',
+    'app_directory' => '/opt/{{ app_name }}',
+    'log_directory' => '/var/log/{{ app_name }}'
 ];
 
-foreach ($required_dirs as $dir) {
+foreach ($required_dirs as $check_name => $dir) {
     if (is_dir($dir) && is_readable($dir)) {
-        $health_status['checks']['filesystem_' . basename($dir)] = [
+        $health_status['checks']['filesystem_' . $check_name] = [
             'status' => 'healthy',
             'message' => "Directory $dir is accessible"
         ];
     } else {
-        $health_status['checks']['filesystem_' . basename($dir)] = [
+        $health_status['checks']['filesystem_' . $check_name] = [
             'status' => 'unhealthy',
             'message' => "Directory $dir is not accessible"
         ];
