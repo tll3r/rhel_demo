@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+# Red Hat Demo - Simple Alerting Script
+
+APP_NAME="{{ app_name }}"
+LOG_DIR="/var/log/{{ app_name }}"
+ALERT_LOG="$LOG_DIR/alerts.log"
+
+# Simple alert function
+send_alert() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] ALERT: $message" >> "$ALERT_LOG"
+    # In production, this could send emails, webhooks, etc.
+}
+
+# Basic health checks
+if ! systemctl is-active --quiet nginx; then
+    send_alert "Nginx service is down"
+fi
+
+if ! systemctl is-active --quiet httpd; then
+    send_alert "Apache service is down"
+fi
+
+if ! systemctl is-active --quiet mariadb; then
+    send_alert "MariaDB service is down"
+fi
+
+# Check disk space
+DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$DISK_USAGE" -gt 90 ]; then
+    send_alert "High disk usage: ${DISK_USAGE}%"
+fi 

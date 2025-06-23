@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+# Red Hat Demo - Log Aggregator Script
+
+APP_NAME="{{ app_name }}"
+LOG_DIR="/var/log/{{ app_name }}"
+AGGREGATE_LOG="$LOG_DIR/aggregated.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Create log directory if it doesn't exist
+mkdir -p "$LOG_DIR"
+
+# Aggregate recent logs from various sources
+{
+    echo "[$TIMESTAMP] Log Aggregation Report"
+    echo "==================================="
+    
+    # Recent system logs
+    echo "System Logs (last 10 lines):"
+    tail -n 10 /var/log/messages 2>/dev/null || echo "No system logs available"
+    echo ""
+    
+    # Web server logs
+    echo "Web Server Logs (last 10 lines):"
+    tail -n 10 /var/log/httpd/error_log 2>/dev/null || echo "No web server logs available"
+    echo ""
+    
+    # Load balancer logs
+    echo "Load Balancer Logs (last 10 lines):"
+    tail -n 10 /var/log/nginx/error.log 2>/dev/null || echo "No load balancer logs available"
+    echo ""
+    
+    # Application logs
+    echo "Application Logs (last 10 lines):"
+    if [ -f "$LOG_DIR/system_monitor.log" ]; then
+        tail -n 10 "$LOG_DIR/system_monitor.log"
+    else
+        echo "No application logs available"
+    fi
+    echo ""
+    
+    echo "==================================="
+    echo ""
+    
+} >> "$AGGREGATE_LOG"
+
+# Rotate aggregate log if it gets too large (>20MB)
+if [ -f "$AGGREGATE_LOG" ] && [ $(stat -c%s "$AGGREGATE_LOG" 2>/dev/null || echo 0) -gt 20971520 ]; then
+    tail -n 5000 "$AGGREGATE_LOG" > "$AGGREGATE_LOG.tmp"
+    mv "$AGGREGATE_LOG.tmp" "$AGGREGATE_LOG"
+fi 

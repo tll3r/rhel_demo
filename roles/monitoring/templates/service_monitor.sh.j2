@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+# Red Hat Demo - Service Monitoring Script
+
+APP_NAME="{{ app_name }}"
+LOG_DIR="/var/log/{{ app_name }}"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Create log directory if it doesn't exist
+mkdir -p "$LOG_DIR"
+
+# Services to monitor
+SERVICES=("nginx" "httpd" "mariadb" "collectd" "sysstat")
+
+# Check service status
+{
+    echo "[$TIMESTAMP] Service Status Report"
+    echo "================================="
+    
+    for service in "${SERVICES[@]}"; do
+        if systemctl is-active --quiet "$service" 2>/dev/null; then
+            echo "$service: RUNNING"
+        else
+            echo "$service: STOPPED"
+            # Try to restart critical services
+            if [[ "$service" == "nginx" || "$service" == "httpd" || "$service" == "mariadb" ]]; then
+                echo "[$TIMESTAMP] Attempting to restart $service" >> "$LOG_DIR/service_restart.log"
+                systemctl restart "$service" 2>/dev/null
+                if systemctl is-active --quiet "$service"; then
+                    echo "[$TIMESTAMP] Successfully restarted $service" >> "$LOG_DIR/service_restart.log"
+                else
+                    echo "[$TIMESTAMP] FAILED to restart $service" >> "$LOG_DIR/service_restart.log"
+                fi
+            fi
+        fi
+    done
+    
+    # Check port availability
+    echo ""
+    echo "Port Status:"
+    
+    # Web server ports
+    if netstat -ln | grep -q ":{{ web_port }}"; then
+        echo "Web server ({{ web_port }}): LISTENING"
+    else
+        echo "Web server ({{ web_port }}): NOT LISTENING"
+    fi
+    
+    # Load balancer port
+    if netstat -ln | grep -q ":{{ lb_port }}"; then
+        echo "Load balancer ({{ lb_port }}): LISTENING" 
+    else
+        echo "Load balancer ({{ lb_port }}): NOT LISTENING"
+    fi
+    
+    # Database port
+    if netstat -ln | grep -q ":3306"; then
+        echo "Database (3306): LISTENING"
+    else
+        echo "Database (3306): NOT LISTENING"
+    fi
+    
+    echo "================================="
+    echo ""
+    
+} >> "$LOG_DIR/service_monitor.log"
+
+# Rotate log file if it gets too large (>10MB)
+if [ -f "$LOG_DIR/service_monitor.log" ] && [ $(stat -c%s "$LOG_DIR/service_monitor.log" 2>/dev/null || echo 0) -gt 10485760 ]; then
+    tail -n 5000 "$LOG_DIR/service_monitor.log" > "$LOG_DIR/service_monitor.log.tmp"
+    mv "$LOG_DIR/service_monitor.log.tmp" "$LOG_DIR/service_monitor.log"
+fi 

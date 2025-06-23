@@ -1,0 +1,55 @@
+<?php
+// {{ ansible_managed }}
+// Red Hat Demo - Monitoring API Endpoint
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+
+// Basic system information
+$data = array(
+    'timestamp' => date('Y-m-d H:i:s'),
+    'application' => '{{ app_name }}',
+    'status' => 'online',
+    'services' => array(),
+    'system' => array()
+);
+
+// Check service status
+$services = ['nginx', 'httpd', 'mariadb', 'collectd'];
+foreach ($services as $service) {
+    $status = exec("systemctl is-active $service 2>/dev/null");
+    $data['services'][$service] = ($status === 'active') ? 'running' : 'stopped';
+}
+
+// Get basic system info
+$data['system']['uptime'] = exec('uptime -p');
+$data['system']['load'] = sys_getloadavg();
+$data['system']['memory'] = array(
+    'total' => exec("free -b | grep Mem | awk '{print $2}'"),
+    'used' => exec("free -b | grep Mem | awk '{print $3}'"),
+    'free' => exec("free -b | grep Mem | awk '{print $4}'")
+);
+
+// Get disk usage
+$data['system']['disk'] = array(
+    'total' => disk_total_space('/'),
+    'free' => disk_free_space('/'),
+    'used' => disk_total_space('/') - disk_free_space('/')
+);
+
+// Port status
+$ports = array(
+    '{{ web_port }}' => 'web_server',
+    '{{ lb_port }}' => 'load_balancer',
+    '3306' => 'database'
+);
+
+$data['ports'] = array();
+foreach ($ports as $port => $service) {
+    $check = exec("netstat -ln | grep :$port");
+    $data['ports'][$service] = !empty($check) ? 'listening' : 'not_listening';
+}
+
+// Return JSON response
+echo json_encode($data, JSON_PRETTY_PRINT);
+?> 

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+# Red Hat Demo - Performance Baseline Script
+
+APP_NAME="{{ app_name }}"
+LOG_DIR="/var/log/{{ app_name }}"
+BASELINE_FILE="$LOG_DIR/baseline.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Create log directory if it doesn't exist
+mkdir -p "$LOG_DIR"
+
+echo "[$TIMESTAMP] Creating performance baseline for {{ app_name }}"
+
+# CPU Information
+echo "CPU Information:" > "$BASELINE_FILE"
+cat /proc/cpuinfo | grep "model name" | head -1 >> "$BASELINE_FILE"
+echo "CPU cores: $(nproc)" >> "$BASELINE_FILE"
+
+# Memory Information  
+echo -e "\nMemory Information:" >> "$BASELINE_FILE"
+free -h | grep "Mem:" | awk '{print "Total: " $2 ", Available: " $7}' >> "$BASELINE_FILE"
+
+# Disk Information
+echo -e "\nDisk Information:" >> "$BASELINE_FILE"
+df -h | grep -E '^/dev/' | head -3 >> "$BASELINE_FILE"
+
+# Network Information
+echo -e "\nNetwork Information:" >> "$BASELINE_FILE"
+ip route | grep default | head -1 >> "$BASELINE_FILE"
+
+# System Load
+echo -e "\nCurrent System Load:" >> "$BASELINE_FILE"
+uptime >> "$BASELINE_FILE"
+
+# Service Status
+echo -e "\nService Status:" >> "$BASELINE_FILE"
+systemctl is-active nginx httpd mariadb collectd >> "$BASELINE_FILE" 2>/dev/null
+
+echo "Baseline created successfully at $BASELINE_FILE" 

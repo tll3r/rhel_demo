@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+# Red Hat Demo - Sysstat Configuration
+# Configuration file for sysstat
+
+# How long to keep log files (in days)
+HISTORY=30
+
+# Compress log files older than
+COMPRESSAFTER=31
+
+# Parameters for the system activity data collector (sar)
+# -u: CPU utilization
+# -r: Memory utilization  
+# -b: I/O and transfer rate statistics
+# -n DEV: Network statistics
+SADC_OPTIONS="-S DISK"
+
+# Collection interval (in seconds)
+SA_INTERVAL=300
+
+# Directory where sa files are saved
+SA_DIR=/var/log/sa 

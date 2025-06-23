@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+# Red Hat Demo - Logwatch Configuration for {{ app_name }}
+
+Title = "{{ app_name }} Application Logs"
+LogFile = /var/log/{{ app_name }}/*.log
+
+*RemoveHeaders
+*ApplyStdDate
+
+# Monitor for specific patterns
+$IgnoreUnmatched = Yes
+
+# Alert patterns
+*OnlyService = {{ app_name }}
+*Detail = Med 
