@@ -85,10 +85,10 @@ function checkDatabaseConnection() {
 function checkServices() {
     $services = [];
     
-    $processExists = function($needle) {
+    $processExists = function($substr) {
         foreach (glob('/proc/[0-9]*/comm') as $commFile) {
             $name = trim(@file_get_contents($commFile));
-            if ($name === $needle) {
+            if ($name !== '' && stripos($name, $substr) !== false) {
                 return true;
             }
         }
@@ -97,7 +97,7 @@ function checkServices() {
 
     $services['apache']  = ['status' => $processExists('httpd')   ? 'running' : 'stopped'];
     $services['nginx']   = ['status' => $processExists('nginx')   ? 'running' : 'stopped'];
-    $services['mariadb'] = ['status' => ($processExists('mariadbd') || $processExists('mysqld')) ? 'running' : 'stopped'];
+    $services['mariadb'] = ['status' => $processExists('maria')  ? 'running' : 'stopped'];
     
     return $services;
 }
