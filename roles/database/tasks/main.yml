@@ -22,20 +22,6 @@
     mode: '0755'
     state: directory
 
-- name: Create MariaDB data directory
-  file:
-    path: /opt/{{ app_name }}/data/mysql
-    owner: mysql
-    group: mysql
-    mode: '0755'
-    state: directory
-
-- name: Initialize MariaDB data directory if it doesn't exist
-  command: mysql_install_db --user=mysql --datadir=/opt/{{ app_name }}/data/mysql
-  args:
-    creates: /opt/{{ app_name }}/data/mysql/mysql
-  become: yes
-
 - name: Configure MariaDB
   template:
     src: my.cnf.j2
