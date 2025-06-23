@@ -38,6 +38,14 @@
     mode: '0755'
     state: directory
 
+- name: Create web application log directory
+  file:
+    path: /var/log/httpd/{{ app_name }}
+    owner: apache
+    group: apache
+    mode: '0755'
+    state: directory
+
 - name: Configure Apache HTTPD
   template:
     src: httpd.conf.j2
