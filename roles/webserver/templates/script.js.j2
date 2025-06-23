@@ -1,0 +1,298 @@
+// Red Hat Demo - Interactive JavaScript
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the application
+    initApp();
+    
+    // Set up real-time updates
+    setInterval(updateMetrics, 5000);
+    setInterval(updateSystemStatus, 10000);
+    
+    // Load initial data
+    loadSystemStatus();
+});
+
+function initApp() {
+    console.log('Red Hat Demo Application initialized');
+    
+    // Add smooth scrolling for navigation
+    document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Add loading animations
+    addLoadingAnimations();
+}
+
+function addLoadingAnimations() {
+    // Add fade-in animation to cards
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    document.querySelectorAll('.card, .tool-card, .metric-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+}
+
+async function loadSystemStatus() {
+    try {
+        const response = await fetch('/{{ app_name }}/api.php/api/status');
+        if (response.ok) {
+            const data = await response.json();
+            displaySystemStatus(data);
+        } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error loading system status:', error);
+        displayError('Failed to load system status');
+    }
+}
+
+function displaySystemStatus(data) {
+    const statusContent = document.getElementById('status-content');
+    if (!statusContent) return;
+    
+    const html = `
+        <div class="card">
+            <h3>System Overview</h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <strong>Application:</strong> ${data.application} v${data.version}
+                </div>
+                <div class="status-item">
+                    <strong>Timestamp:</strong> ${data.timestamp}
+                </div>
+                <div class="status-item">
+                    <strong>Database:</strong> 
+                    <span class="status-${data.database.status === 'connected' ? 'ok' : 'error'}">
+                        ${data.database.status}
+                    </span>
+                </div>
+            </div>
+            
+            <h4>Service Status</h4>
+            <div class="services-grid">
+                ${Object.entries(data.services).map(([service, info]) => `
+                    <div class="service-item">
+                        <strong>${service}:</strong> 
+                        <span class="status-${info.status === 'active' ? 'ok' : 'warning'}">
+                            ${info.status}
+                        </span>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <h4>System Metrics</h4>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <strong>Load Average:</strong> ${data.system.load_average['1min']} (1min)
+                </div>
+                <div class="metric-item">
+                    <strong>Memory Usage:</strong> ${data.system.memory.usage_percent}%
+                </div>
+                <div class="metric-item">
+                    <strong>Disk Usage:</strong> ${data.system.disk.usage_percent}%
+                </div>
+            </div>
+        </div>
+    `;
+    
+    statusContent.innerHTML = html;
+}
+
+function displayError(message) {
+    const statusContent = document.getElementById('status-content');
+    if (statusContent) {
+        statusContent.innerHTML = `
+            <div class="card">
+                <div class="status-error">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button onclick="loadSystemStatus()">Retry</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function updateMetrics() {
+    try {
+        const response = await fetch('/{{ app_name }}/api.php/api/status');
+        if (response.ok) {
+            const data = await response.json();
+            updateMetricDisplay(data.system);
+        }
+    } catch (error) {
+        console.error('Error updating metrics:', error);
+    }
+}
+
+function updateMetricDisplay(systemData) {
+    // Update load average
+    const loadElement = document.getElementById('load-average');
+    if (loadElement) {
+        loadElement.textContent = systemData.load_average['1min'];
+    }
+    
+    // Update memory usage
+    const memoryElement = document.getElementById('memory-usage');
+    if (memoryElement) {
+        memoryElement.textContent = `${systemData.memory.usage_percent}%`;
+    }
+    
+    // Update disk usage
+    const diskElement = document.getElementById('disk-usage');
+    if (diskElement) {
+        diskElement.textContent = `${systemData.disk.usage_percent}%`;
+    }
+    
+    // Update network status
+    const networkElement = document.getElementById('network-status');
+    if (networkElement) {
+        networkElement.textContent = 'Connected';
+    }
+    
+    // Update uptime
+    updateUptime();
+}
+
+function updateUptime() {
+    const uptimeElement = document.getElementById('uptime');
+    if (uptimeElement) {
+        // This would typically come from the server, but for demo purposes:
+        const now = new Date();
+        const startTime = new Date(now.getTime() - Math.random() * 86400000); // Random uptime
+        const diff = now - startTime;
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        uptimeElement.textContent = `${hours}h ${minutes}m`;
+    }
+}
+
+async function updateSystemStatus() {
+    // Refresh system status periodically
+    await loadSystemStatus();
+}
+
+// Add some interactive features
+function addInteractiveFeatures() {
+    // Add tooltip functionality
+    document.querySelectorAll('.tool-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+    
+    // Add click handlers for metrics
+    document.querySelectorAll('.metric-card').forEach(card => {
+        card.addEventListener('click', function() {
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+}
+
+// Add CSS for dynamic elements
+const dynamicStyles = `
+    .status-grid, .services-grid, .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .status-item, .service-item, .metric-item {
+        padding: 10px;
+        background: var(--light-bg);
+        border-radius: 5px;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .status-error {
+        text-align: center;
+        color: var(--danger-color);
+    }
+    
+    .status-error button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .status-error button:hover {
+        background: var(--accent-color);
+    }
+`;
+
+// Inject dynamic styles
+const styleSheet = document.createElement('style');
+styleSheet.textContent = dynamicStyles;
+document.head.appendChild(styleSheet);
+
+// Initialize interactive features
+addInteractiveFeatures();
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case '1':
+                e.preventDefault();
+                document.querySelector('a[href="#overview"]').click();
+                break;
+            case '2':
+                e.preventDefault();
+                document.querySelector('a[href="#tools"]').click();
+                break;
+            case '3':
+                e.preventDefault();
+                document.querySelector('a[href="#status"]').click();
+                break;
+            case '4':
+                e.preventDefault();
+                document.querySelector('a[href="#monitoring"]').click();
+                break;
+            case 'r':
+                e.preventDefault();
+                loadSystemStatus();
+                break;
+        }
+    }
+});
+
+// Add console welcome message
+console.log(`
+🐧 Welcome to Red Hat Tools Demo!
+📊 This application showcases various Red Hat technologies.
+🔧 Keyboard shortcuts: Ctrl+1-4 for navigation, Ctrl+R to refresh status.
+📚 Check out the source code to learn more about the implementation.
+`); 

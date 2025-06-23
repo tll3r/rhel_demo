@@ -1,0 +1,101 @@
+<?php
+// Red Hat Demo - Health Check Endpoint
+
+header('Content-Type: application/json');
+
+$health_status = [
+    'status' => 'healthy',
+    'timestamp' => date('Y-m-d H:i:s'),
+    'application' => '{{ app_name }}',
+    'version' => '1.0.0',
+    'checks' => []
+];
+
+// Check database connection
+try {
+    require_once 'config.php';
+    $pdo = getDBConnection();
+    if ($pdo) {
+        $pdo->query('SELECT 1');
+        $health_status['checks']['database'] = [
+            'status' => 'healthy',
+            'message' => 'Database connection successful'
+        ];
+    } else {
+        $health_status['checks']['database'] = [
+            'status' => 'unhealthy',
+            'message' => 'Database connection failed'
+        ];
+        $health_status['status'] = 'unhealthy';
+    }
+} catch (Exception $e) {
+    $health_status['checks']['database'] = [
+        'status' => 'unhealthy',
+        'message' => 'Database error: ' . $e->getMessage()
+    ];
+    $health_status['status'] = 'unhealthy';
+}
+
+// Check file system
+$required_dirs = [
+    '/var/www/html/{{ app_name }}',
+    '/opt/{{ app_name }}',
+    '/var/log/{{ app_name }}'
+];
+
+foreach ($required_dirs as $dir) {
+    if (is_dir($dir) && is_readable($dir)) {
+        $health_status['checks']['filesystem_' . basename($dir)] = [
+            'status' => 'healthy',
+            'message' => "Directory $dir is accessible"
+        ];
+    } else {
+        $health_status['checks']['filesystem_' . basename($dir)] = [
+            'status' => 'unhealthy',
+            'message' => "Directory $dir is not accessible"
+        ];
+        $health_status['status'] = 'unhealthy';
+    }
+}
+
+// Check system resources
+$load = sys_getloadavg();
+$health_status['checks']['system_load'] = [
+    'status' => $load[0] < 5 ? 'healthy' : 'warning',
+    'message' => "Load average: " . implode(', ', $load),
+    'value' => $load[0]
+];
+
+$memory = file_get_contents('/proc/meminfo');
+preg_match('/MemTotal:\s+(\d+)/', $memory, $total);
+preg_match('/MemAvailable:\s+(\d+)/', $memory, $available);
+
+if (isset($total[1]) && isset($available[1])) {
+    $usage_percent = round((($total[1] - $available[1]) / $total[1]) * 100, 2);
+    $health_status['checks']['memory'] = [
+        'status' => $usage_percent < 90 ? 'healthy' : 'warning',
+        'message' => "Memory usage: {$usage_percent}%",
+        'value' => $usage_percent
+    ];
+}
+
+// Check disk space
+$disk_free = disk_free_space('/');
+$disk_total = disk_total_space('/');
+$disk_usage = round((($disk_total - $disk_free) / $disk_total) * 100, 2);
+
+$health_status['checks']['disk'] = [
+    'status' => $disk_usage < 90 ? 'healthy' : 'warning',
+    'message' => "Disk usage: {$disk_usage}%",
+    'value' => $disk_usage
+];
+
+// Set HTTP status code
+if ($health_status['status'] === 'healthy') {
+    http_response_code(200);
+} else {
+    http_response_code(503);
+}
+
+echo json_encode($health_status, JSON_PRETTY_PRINT);
+?> 

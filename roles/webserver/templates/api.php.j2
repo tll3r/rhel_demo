@@ -1,0 +1,278 @@
+<?php
+require_once 'config.php';
+
+// Set content type to JSON
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Get request method and path
+$method = $_SERVER['REQUEST_METHOD'];
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path_parts = explode('/', trim($path, '/'));
+
+// API endpoints
+switch ($method) {
+    case 'GET':
+        if (isset($path_parts[1]) && $path_parts[1] === 'api') {
+            $endpoint = $path_parts[2] ?? 'status';
+            
+            switch ($endpoint) {
+                case 'status':
+                    getSystemStatus();
+                    break;
+                case 'users':
+                    getUsers();
+                    break;
+                case 'posts':
+                    getPosts();
+                    break;
+                case 'system':
+                    getSystemInfo();
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+            }
+        }
+        break;
+        
+    case 'POST':
+        if (isset($path_parts[1]) && $path_parts[1] === 'api') {
+            $endpoint = $path_parts[2] ?? '';
+            
+            switch ($endpoint) {
+                case 'users':
+                    createUser();
+                    break;
+                case 'posts':
+                    createPost();
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+            }
+        }
+        break;
+        
+    default:
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+}
+
+function getSystemStatus() {
+    $status = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'application' => APP_NAME,
+        'version' => APP_VERSION,
+        'database' => checkDatabaseConnection(),
+        'services' => checkServices(),
+        'system' => getSystemMetrics()
+    ];
+    
+    echo json_encode($status, JSON_PRETTY_PRINT);
+}
+
+function checkDatabaseConnection() {
+    $pdo = getDBConnection();
+    if ($pdo) {
+        try {
+            $pdo->query('SELECT 1');
+            return ['status' => 'connected', 'message' => 'Database connection successful'];
+        } catch (Exception $e) {
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }
+    }
+    return ['status' => 'error', 'message' => 'Failed to establish database connection'];
+}
+
+function checkServices() {
+    $services = [];
+    
+    // Check Apache
+    $apache_status = shell_exec('systemctl is-active httpd 2>/dev/null') ?: 'unknown';
+    $services['apache'] = ['status' => trim($apache_status)];
+    
+    // Check Nginx
+    $nginx_status = shell_exec('systemctl is-active nginx 2>/dev/null') ?: 'unknown';
+    $services['nginx'] = ['status' => trim($nginx_status)];
+    
+    // Check MariaDB
+    $mariadb_status = shell_exec('systemctl is-active mariadb 2>/dev/null') ?: 'unknown';
+    $services['mariadb'] = ['status' => trim($mariadb_status)];
+    
+    return $services;
+}
+
+function getSystemMetrics() {
+    $metrics = [];
+    
+    // CPU load
+    $load = sys_getloadavg();
+    $metrics['load_average'] = [
+        '1min' => $load[0],
+        '5min' => $load[1],
+        '15min' => $load[2]
+    ];
+    
+    // Memory usage
+    $memory = file_get_contents('/proc/meminfo');
+    preg_match('/MemTotal:\s+(\d+)/', $memory, $total);
+    preg_match('/MemAvailable:\s+(\d+)/', $memory, $available);
+    
+    if (isset($total[1]) && isset($available[1])) {
+        $used = $total[1] - $available[1];
+        $metrics['memory'] = [
+            'total' => $total[1] * 1024,
+            'used' => $used * 1024,
+            'available' => $available[1] * 1024,
+            'usage_percent' => round(($used / $total[1]) * 100, 2)
+        ];
+    }
+    
+    // Disk usage
+    $disk = disk_free_space('/') / disk_total_space('/');
+    $metrics['disk'] = [
+        'usage_percent' => round((1 - $disk) * 100, 2)
+    ];
+    
+    return $metrics;
+}
+
+function getUsers() {
+    $pdo = getDBConnection();
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed']);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->query('SELECT id, username, email, created_at FROM users ORDER BY created_at DESC');
+        $users = $stmt->fetchAll();
+        echo json_encode($users, JSON_PRETTY_PRINT);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+}
+
+function getPosts() {
+    $pdo = getDBConnection();
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed']);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->query('
+            SELECT p.id, p.title, p.content, p.created_at, u.username 
+            FROM posts p 
+            JOIN users u ON p.user_id = u.id 
+            ORDER BY p.created_at DESC
+        ');
+        $posts = $stmt->fetchAll();
+        echo json_encode($posts, JSON_PRETTY_PRINT);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+}
+
+function getSystemInfo() {
+    $pdo = getDBConnection();
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed']);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->query('SELECT * FROM system_info ORDER BY timestamp DESC LIMIT 10');
+        $system_info = $stmt->fetchAll();
+        echo json_encode($system_info, JSON_PRETTY_PRINT);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+}
+
+function createUser() {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($input['username']) || !isset($input['email'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Username and email are required']);
+        return;
+    }
+    
+    $username = sanitizeInput($input['username']);
+    $email = sanitizeInput($input['email']);
+    
+    if (!validateEmail($email)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid email format']);
+        return;
+    }
+    
+    $pdo = getDBConnection();
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed']);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->prepare('INSERT INTO users (username, email) VALUES (?, ?)');
+        $stmt->execute([$username, $email]);
+        
+        $user_id = $pdo->lastInsertId();
+        echo json_encode([
+            'success' => true,
+            'user_id' => $user_id,
+            'message' => 'User created successfully'
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+}
+
+function createPost() {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($input['user_id']) || !isset($input['title']) || !isset($input['content'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'User ID, title, and content are required']);
+        return;
+    }
+    
+    $user_id = (int)$input['user_id'];
+    $title = sanitizeInput($input['title']);
+    $content = sanitizeInput($input['content']);
+    
+    $pdo = getDBConnection();
+    if (!$pdo) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed']);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->prepare('INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?)');
+        $stmt->execute([$user_id, $title, $content]);
+        
+        $post_id = $pdo->lastInsertId();
+        echo json_encode([
+            'success' => true,
+            'post_id' => $post_id,
+            'message' => 'Post created successfully'
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+}
+?> 

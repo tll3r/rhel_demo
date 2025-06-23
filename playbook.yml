@@ -20,12 +20,6 @@
         update_cache: yes
       tags: [system, packages]
     
-    - name: Install EPEL repository
-      dnf:
-        name: epel-release
-        state: present
-      tags: [system, packages]
-    
     - name: Install common utilities
       dnf:
         name:

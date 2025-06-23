@@ -3,7 +3,7 @@
   dnf:
     name:
       - mariadb-server
-      - mariadb-client
+      - mariadb
       - mariadb-connector-python3
       - python3-mysql
     state: present
