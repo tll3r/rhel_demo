@@ -8,6 +8,20 @@
     state: present
     update_cache: yes
 
+- name: Stop MariaDB service if running
+  systemd:
+    name: mariadb
+    state: stopped
+  ignore_errors: yes
+
+- name: Create MariaDB log directory
+  file:
+    path: /var/log/mariadb
+    owner: mysql
+    group: mysql
+    mode: '0755'
+    state: directory
+
 - name: Create MariaDB data directory
   file:
     path: /opt/{{ app_name }}/data/mysql
@@ -15,6 +29,12 @@
     group: mysql
     mode: '0755'
     state: directory
+
+- name: Initialize MariaDB data directory if it doesn't exist
+  command: mysql_install_db --user=mysql --datadir=/opt/{{ app_name }}/data/mysql
+  args:
+    creates: /opt/{{ app_name }}/data/mysql/mysql
+  become: yes
 
 - name: Configure MariaDB
   template:

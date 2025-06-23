@@ -108,7 +108,7 @@
       dnf:
         name:
           - glibc-langpack-en
-          - glibc-all-langpacks
+          - glibc-all-langpacksf
         state: present
       when: ansible_distribution == "Fedora"
     
