@@ -4,7 +4,6 @@
     name:
       - nginx
       - nginx-mod-stream
-      - nginx-mod-http-headers-more-filter
     state: present
     update_cache: yes
 
