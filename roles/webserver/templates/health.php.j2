@@ -11,6 +11,8 @@ $health_status = [
     'checks' => []
 ];
 
+$overall_healthy = true;
+
 // Check database connection
 try {
     require_once 'config.php';
@@ -26,14 +28,14 @@ try {
             'status' => 'unhealthy',
             'message' => 'Database connection failed'
         ];
-        $health_status['status'] = 'unhealthy';
+        $overall_healthy = false;
     }
 } catch (Exception $e) {
     $health_status['checks']['database'] = [
         'status' => 'unhealthy',
         'message' => 'Database error: ' . $e->getMessage()
     ];
-    $health_status['status'] = 'unhealthy';
+    $overall_healthy = false;
 }
 
 // Check file system
@@ -54,17 +56,23 @@ foreach ($required_dirs as $dir) {
             'status' => 'unhealthy',
             'message' => "Directory $dir is not accessible"
         ];
-        $health_status['status'] = 'unhealthy';
+        $overall_healthy = false;
     }
 }
 
 // Check system resources
 $load = sys_getloadavg();
+$load_status = $load[0] < 5 ? 'healthy' : 'warning';
 $health_status['checks']['system_load'] = [
-    'status' => $load[0] < 5 ? 'healthy' : 'warning',
+    'status' => $load_status,
     'message' => "Load average: " . implode(', ', $load),
     'value' => $load[0]
 ];
+
+// Warning doesn't make overall status unhealthy, only 'unhealthy' status does
+if ($load_status === 'unhealthy') {
+    $overall_healthy = false;
+}
 
 $memory = file_get_contents('/proc/meminfo');
 preg_match('/MemTotal:\s+(\d+)/', $memory, $total);
@@ -72,11 +80,17 @@ preg_match('/MemAvailable:\s+(\d+)/', $memory, $available);
 
 if (isset($total[1]) && isset($available[1])) {
     $usage_percent = round((($total[1] - $available[1]) / $total[1]) * 100, 2);
+    $memory_status = $usage_percent < 90 ? 'healthy' : 'warning';
     $health_status['checks']['memory'] = [
-        'status' => $usage_percent < 90 ? 'healthy' : 'warning',
+        'status' => $memory_status,
         'message' => "Memory usage: {$usage_percent}%",
         'value' => $usage_percent
     ];
+    
+    // Warning doesn't make overall status unhealthy, only 'unhealthy' status does
+    if ($memory_status === 'unhealthy') {
+        $overall_healthy = false;
+    }
 }
 
 // Check disk space
@@ -84,11 +98,20 @@ $disk_free = disk_free_space('/');
 $disk_total = disk_total_space('/');
 $disk_usage = round((($disk_total - $disk_free) / $disk_total) * 100, 2);
 
+$disk_status = $disk_usage < 90 ? 'healthy' : 'warning';
 $health_status['checks']['disk'] = [
-    'status' => $disk_usage < 90 ? 'healthy' : 'warning',
+    'status' => $disk_status,
     'message' => "Disk usage: {$disk_usage}%",
     'value' => $disk_usage
 ];
+
+// Warning doesn't make overall status unhealthy, only 'unhealthy' status does
+if ($disk_status === 'unhealthy') {
+    $overall_healthy = false;
+}
+
+// Set overall status
+$health_status['status'] = $overall_healthy ? 'healthy' : 'unhealthy';
 
 // Set HTTP status code
 if ($health_status['status'] === 'healthy') {
