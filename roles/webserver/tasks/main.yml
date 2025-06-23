@@ -69,22 +69,32 @@
     path: /etc/httpd/conf.d/php.conf
     create: yes
     block: |
-      # Load PHP module
-      LoadModule php_module modules/libphp.so
-      
-      # PHP file handling
+      # PHP file handling (without loading module - handled by php-fpm)
       <FilesMatch \.php$>
-          SetHandler application/x-httpd-php
+          SetHandler "proxy:unix:/run/php-fpm/www.sock|fcgi://localhost"
       </FilesMatch>
       
-      # Prevent access to .php files as plain text if PHP module is not loaded
-      <FilesMatch "\.ph(p[3457]?|t|tml)$">
-          Require all denied
-      </FilesMatch>
+      # Alternative fallback for direct PHP module if available
+      <IfModule mod_php.c>
+          <FilesMatch \.php$>
+              SetHandler application/x-httpd-php
+          </FilesMatch>
+      </IfModule>
     owner: root
     group: root
     mode: '0644'
   notify: restart httpd
+
+- name: Install and configure PHP-FPM for Fedora
+  dnf:
+    name: php-fpm
+    state: present
+
+- name: Start and enable PHP-FPM
+  systemd:
+    name: php-fpm
+    enabled: yes
+    state: started
 
 
 
