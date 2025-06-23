@@ -79,27 +79,6 @@
         - use_samba_home_dirs
       when: selinux_status.stdout == "Enforcing"
       ignore_errors: yes
-    
-    - name: Create SELinux policy for application
-      template:
-        src: rhel-demo.te.j2
-        dest: /tmp/rhel-demo.te
-        mode: '0644'
-      when: selinux_status.stdout == "Enforcing"
-    
-    - name: Compile SELinux policy
-      command: make -f /usr/share/selinux/devel/Makefile rhel-demo.pp
-      args:
-        chdir: /tmp
-      when: selinux_status.stdout == "Enforcing"
-      ignore_errors: yes
-    
-    - name: Install SELinux policy
-      command: semodule -i rhel-demo.pp
-      args:
-        chdir: /tmp
-      when: selinux_status.stdout == "Enforcing"
-      ignore_errors: yes
 
 - name: Configure system security
   block:
@@ -126,10 +105,10 @@
         group: root
         mode: '0640'
     
-    - name: Restart auditd
+    - name: Reload auditd
       systemd:
         name: auditd
-        state: restarted
+        state: reloaded
 
 - name: Configure system hardening
   block:
