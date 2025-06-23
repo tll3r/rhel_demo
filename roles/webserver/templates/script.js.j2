@@ -52,9 +52,11 @@ function addLoadingAnimations() {
     });
 }
 
+const STATUS_ENDPOINT = 'api.php?endpoint=status';
+
 async function loadSystemStatus() {
     try {
-        const response = await fetch('/{{ app_name }}/api.php?endpoint=status');
+        const response = await fetch(STATUS_ENDPOINT);
         if (response.ok) {
             const data = await response.json();
             displaySystemStatus(data);
@@ -136,7 +138,7 @@ function displayError(message) {
 
 async function updateMetrics() {
     try {
-        const response = await fetch('/{{ app_name }}/api.php?endpoint=status');
+        const response = await fetch(STATUS_ENDPOINT);
         if (response.ok) {
             const data = await response.json();
             updateMetricDisplay(data.system);
