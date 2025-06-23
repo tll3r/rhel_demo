@@ -138,7 +138,7 @@
 
 - name: Test web application
   uri:
-    url: "http://localhost:{{ web_port }}/{{ app_name }}/health.php"
+    url: "http://localhost:{{ web_port }}/health.php"
     method: GET
     status_code: 200
   register: health_check
