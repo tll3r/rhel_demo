@@ -21,86 +21,23 @@ LoadPlugin cpu
 LoadPlugin df
 LoadPlugin disk
 LoadPlugin interface
-LoadPlugin load
+LoadPlugin load  
 LoadPlugin memory
 LoadPlugin swap
 LoadPlugin uptime
 
-# Network metrics
-LoadPlugin network
-<Plugin network>
-    Server "127.0.0.1" "25826"
-</Plugin>
-
-# Process monitoring
+# Process monitoring (simplified)
 LoadPlugin processes
 <Plugin processes>
     Process "nginx"
     Process "httpd"
     Process "mariadb"
-    Process "mysqld"
-    ProcessMatch "{{ app_name }}" "{{ app_name }}"
 </Plugin>
 
-# Database monitoring (if available)
-{% if groups['database'] is defined %}
-LoadPlugin mysql
-<Plugin mysql>
-    <Database "{{ db_name }}">
-        Host "localhost"
-        User "{{ db_user }}"
-        Password "{{ db_password }}"
-        Database "{{ db_name }}"
-        MasterStats true
-    </Database>
-</Plugin>
-{% endif %}
-
-# Web server monitoring
-LoadPlugin apache
-<Plugin apache>
-    <Instance "localhost">
-        URL "http://localhost/server-status?auto"
-        Server "apache"
-    </Instance>
-</Plugin>
-
-# Write to RRD files
+# Write to RRD files (basic configuration)
 LoadPlugin rrdtool
 <Plugin rrdtool>
     DataDir "/var/lib/collectd/rrd"
     CacheTimeout 120
     CacheFlush 900
-    WritesPerSecond 30
-</Plugin>
-
-# Write to CSV files
-LoadPlugin csv
-<Plugin csv>
-    DataDir "/var/lib/collectd/csv"
-    StoreRates false
-</Plugin>
-
-# Thresholds for alerting
-LoadPlugin threshold
-<Plugin threshold>
-    <Type "cpu">
-        WarningMin 0.00
-        WarningMax 80.00
-        FailureMin 0.00
-        FailureMax 95.00
-        Invert false
-        Instance "0"
-    </Type>
-    <Type "memory">
-        WarningMax 80000000
-        FailureMax 95000000
-    </Type>
-    <Type "load">
-        WarningMax 4.00
-        FailureMax 8.00
-    </Type>
-</Plugin>
-
-# Include additional configuration
-Include "/etc/collectd.d" 
+</Plugin> 
