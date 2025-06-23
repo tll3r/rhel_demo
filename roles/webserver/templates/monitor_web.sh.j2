@@ -1,0 +1,44 @@
+#!/bin/bash
+# Red Hat Demo - Web Application Monitoring Script
+
+# Configuration
+APP_NAME="{{ app_name }}"
+WEB_PORT="{{ web_port | default(80) }}"
+LOG_FILE="/var/log/{{ app_name }}/web_monitor.log"
+HEALTH_URL="http://localhost:${WEB_PORT}/${APP_NAME}/health.php"
+
+# Log function
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "${LOG_FILE}"
+}
+
+# Check if Apache is running
+if ! systemctl is-active --quiet httpd; then
+    log "ERROR: Apache HTTPD is not running!"
+    systemctl start httpd
+    log "INFO: Attempted to start Apache HTTPD"
+    exit 1
+fi
+
+# Check web application health
+if curl -f -s "${HEALTH_URL}" > /dev/null; then
+    log "INFO: Web application is healthy"
+    
+    # Update system info in database
+    mysql --user="{{ app_name }}" --password="{{ mysql_app_password | default('AppDemo123!') }}" "{{ app_name }}" << EOF
+INSERT INTO system_info (hostname, uptime, load_average, memory_usage) 
+VALUES (
+    '$(hostname)', 
+    '$(uptime -p)', 
+    '$(cat /proc/loadavg | awk '{print $1, $2, $3}')', 
+    '$(free -h | grep Mem | awk '{print $3 "/" $2}')'
+);
+EOF
+    
+    log "INFO: System info updated in database"
+else
+    log "ERROR: Web application health check failed!"
+    exit 1
+fi
+
+log "INFO: Web application monitoring completed" 

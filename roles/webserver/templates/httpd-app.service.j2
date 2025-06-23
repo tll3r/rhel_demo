@@ -1,0 +1,15 @@
+[Unit]
+Description=Red Hat Demo Web Application
+After=network.target httpd.service mariadb.service
+Wants=httpd.service mariadb.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/bin/true
+User=apache
+Group=apache
+
+[Install]
+WantedBy=multi-user.target 

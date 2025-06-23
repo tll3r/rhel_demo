@@ -1,0 +1,12 @@
+/var/log/{{ app_name }}/*.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 644 apache apache
+    postrotate
+        systemctl reload httpd > /dev/null 2>&1 || true
+    endscript
+} 

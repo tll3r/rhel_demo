@@ -1,5 +1,8 @@
 # Red Hat Tools Demo
 
+> **⚠️ Work in Progress**  
+> This demo is currently under active development and testing. Some components may not work as expected, and the configuration is being optimized for Fedora compatibility. Please check the troubleshooting guide for known issues and workarounds.
+
 This demo showcases common Red Hat Enterprise Linux (RHEL) tools and technologies, with a focus on Ansible automation. The demo deploys a simple multi-tier web application using Red Hat best practices.
 
 ## What This Demo Covers
