@@ -64,22 +64,24 @@
     mode: '0644'
   notify: restart httpd
 
-- name: Ensure PHP is configured in Apache (Fedora compatible)
+- name: Configure PHP-FPM with Apache (Fedora)
   blockinfile:
     path: /etc/httpd/conf.d/php.conf
     create: yes
     block: |
-      # PHP file handling (without loading module - handled by php-fpm)
+      # Enable PHP-FPM for Fedora
       <FilesMatch \.php$>
-          SetHandler "proxy:unix:/run/php-fpm/www.sock|fcgi://localhost"
+          SetHandler "proxy:fcgi://127.0.0.1:9000"
       </FilesMatch>
       
-      # Alternative fallback for direct PHP module if available
-      <IfModule mod_php.c>
-          <FilesMatch \.php$>
-              SetHandler application/x-httpd-php
-          </FilesMatch>
+      # Add PHP index files
+      <IfModule mod_dir.c>
+          DirectoryIndex index.html index.php
       </IfModule>
+      
+      # Enable proxy module
+      LoadModule proxy_module modules/mod_proxy.so
+      LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
     owner: root
     group: root
     mode: '0644'
@@ -89,6 +91,14 @@
   dnf:
     name: php-fpm
     state: present
+
+- name: Configure PHP-FPM to use TCP socket
+  lineinfile:
+    path: /etc/php-fpm.d/www.conf
+    regexp: '^listen\s*='
+    line: 'listen = 127.0.0.1:9000'
+    backup: yes
+  notify: restart httpd
 
 - name: Start and enable PHP-FPM
   systemd:
