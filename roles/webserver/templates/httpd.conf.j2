@@ -1,6 +1,9 @@
 # Red Hat Demo - Apache HTTPD Configuration
 
-<VirtualHost *:{{ web_port }}>
+# Listen on the configured port
+Listen {{ web_port | default(8080) }}
+
+<VirtualHost *:{{ web_port | default(8080) }}>
     ServerName {{ ansible_hostname }}
     ServerAdmin webmaster@{{ ansible_hostname }}
     DocumentRoot /var/www/html/{{ app_name }}
