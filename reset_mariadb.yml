@@ -1,0 +1,52 @@
+---
+- name: Reset MariaDB
+  hosts: localhost
+  become: yes
+  vars:
+    reset_mariadb: true
+  
+  tasks:
+    - name: Stop MariaDB service
+      systemd:
+        name: mariadb
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove MariaDB data directory
+      file:
+        path: /var/lib/mysql
+        state: absent
+
+    - name: Remove MariaDB configuration
+      file:
+        path: /etc/my.cnf.d/rhel-demo.cnf
+        state: absent
+      ignore_errors: yes
+
+    - name: Create MariaDB log directory
+      file:
+        path: /var/log/mariadb
+        owner: mysql
+        group: mysql
+        mode: '0755'
+        state: directory
+
+    - name: Configure MariaDB with minimal settings
+      template:
+        src: roles/database/templates/my.cnf.j2
+        dest: /etc/my.cnf.d/rhel-demo.cnf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start and enable MariaDB service
+      systemd:
+        name: mariadb
+        enabled: yes
+        state: started
+
+    - name: Wait for MariaDB to be ready
+      wait_for:
+        port: 3306
+        delay: 10
+        timeout: 60 

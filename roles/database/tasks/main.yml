@@ -14,6 +14,12 @@
     state: stopped
   ignore_errors: yes
 
+- name: Remove existing MariaDB data to start fresh
+  file:
+    path: /var/lib/mysql
+    state: absent
+  when: reset_mariadb | default(false)
+
 - name: Create MariaDB log directory
   file:
     path: /var/log/mariadb
@@ -22,7 +28,7 @@
     mode: '0755'
     state: directory
 
-- name: Configure MariaDB
+- name: Configure MariaDB with minimal settings
   template:
     src: my.cnf.j2
     dest: /etc/my.cnf.d/rhel-demo.cnf
