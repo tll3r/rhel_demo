@@ -139,6 +139,6 @@
     login_password: "{{ mysql_root_password | default('RedHatDemo123!') }}"
     name: "monitor"
     password: "{{ mysql_monitor_password | default('Monitor123!') }}"
-    priv: "PROCESS,REPLICATION CLIENT,SELECT"
+    priv: "*.*:SELECT,PROCESS,REPLICATION CLIENT"
     host: "localhost"
     state: present 
