@@ -130,7 +130,7 @@
 - name: Configure SELinux for web application
   sefcontext:
     target: '{{ item }}'
-    setype: httpd_exec_t
+    setype: httpd_sys_content_t
     state: present
   loop:
     - '/var/www/html/{{ app_name }}(/.*)?'
