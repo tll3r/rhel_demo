@@ -12,7 +12,7 @@
         state: stopped
       ignore_errors: yes
 
-    - name: Remove MariaDB data directory
+    - name: Remove MariaDB data directory completely
       file:
         path: /var/lib/mysql
         state: absent
@@ -22,6 +22,14 @@
         path: /etc/my.cnf.d/rhel-demo.cnf
         state: absent
       ignore_errors: yes
+
+    - name: Create fresh MariaDB data directory
+      file:
+        path: /var/lib/mysql
+        owner: mysql
+        group: mysql
+        mode: '0755'
+        state: directory
 
     - name: Create MariaDB log directory
       file:
