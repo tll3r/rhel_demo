@@ -1,5 +1,5 @@
 # {{ ansible_managed }}
-# Red Hat Demo - Collectd Configuration
+# Red Hat Demo - Collectd Configuration (Minimal)
 
 # Global settings
 Hostname "{{ ansible_hostname }}"
@@ -7,37 +7,21 @@ FQDNLookup true
 BaseDir "/var/lib/collectd"
 PluginDir "/usr/lib64/collectd"
 TypesDB "/usr/share/collectd/types.db"
-AutoLoadPlugin false
-CollectInternalStats false
 
-# Logging
+# Logging to syslog
 LoadPlugin syslog
 <Plugin syslog>
     LogLevel info
 </Plugin>
 
-# System metrics
+# Basic system metrics
 LoadPlugin cpu
-LoadPlugin df
-LoadPlugin disk
-LoadPlugin interface
-LoadPlugin load  
 LoadPlugin memory
-LoadPlugin swap
-LoadPlugin uptime
+LoadPlugin load
 
-# Process monitoring (simplified)
-LoadPlugin processes
-<Plugin processes>
-    Process "nginx"
-    Process "httpd"
-    Process "mariadb"
-</Plugin>
-
-# Write to RRD files (basic configuration)
-LoadPlugin rrdtool
-<Plugin rrdtool>
-    DataDir "/var/lib/collectd/rrd"
-    CacheTimeout 120
-    CacheFlush 900
+# Simple CSV output (no RRD dependencies)
+LoadPlugin csv
+<Plugin csv>
+    DataDir "/var/lib/collectd/csv"
+    StoreRates false
 </Plugin> 

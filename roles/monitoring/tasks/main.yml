@@ -34,6 +34,7 @@
     name: collectd
     enabled: yes
     state: started
+  ignore_errors: yes
 
 - name: Configure system statistics
   template:
