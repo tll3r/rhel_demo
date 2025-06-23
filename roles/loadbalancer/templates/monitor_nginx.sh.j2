@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+# Red Hat Demo - Nginx Monitoring Script
+# This script monitors nginx health and performance
+
+APP_NAME="{{ app_name }}"
+LOG_FILE="/var/log/nginx/${APP_NAME}/monitor.log"
+ERROR_LOG="/var/log/nginx/error.log"
+ACCESS_LOG="/var/log/nginx/access.log"
+LB_PORT="{{ lb_port }}"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Create log directory if it doesn't exist
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Function to log messages
+log_message() {
+    echo "[$TIMESTAMP] $1" >> "$LOG_FILE"
+}
+
+# Check if nginx is running
+if ! systemctl is-active --quiet nginx; then
+    log_message "ERROR: Nginx service is not running"
+    systemctl restart nginx
+    if systemctl is-active --quiet nginx; then
+        log_message "INFO: Nginx service restarted successfully"
+    else
+        log_message "CRITICAL: Failed to restart nginx service"
+        exit 1
+    fi
+fi
+
+# Check if nginx is listening on the correct port
+if ! netstat -ln | grep -q ":${LB_PORT}"; then
+    log_message "ERROR: Nginx is not listening on port ${LB_PORT}"
+fi
+
+# Check nginx configuration
+if ! nginx -t >/dev/null 2>&1; then
+    log_message "ERROR: Nginx configuration test failed"
+    nginx -t 2>&1 | while read line; do
+        log_message "CONFIG_ERROR: $line"
+    done
+fi
+
+# Check for recent errors in nginx error log
+if [ -f "$ERROR_LOG" ]; then
+    RECENT_ERRORS=$(tail -n 100 "$ERROR_LOG" | grep "$(date '+%Y/%m/%d %H:')" | wc -l)
+    if [ "$RECENT_ERRORS" -gt 0 ]; then
+        log_message "WARNING: Found $RECENT_ERRORS recent errors in nginx error log"
+    fi
+fi
+
+# Check response time
+RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' "http://localhost:${LB_PORT}/health.html" 2>/dev/null || echo "0")
+if [ "$(echo "$RESPONSE_TIME > 5" | bc -l 2>/dev/null || echo 0)" -eq 1 ]; then
+    log_message "WARNING: High response time: ${RESPONSE_TIME}s"
+elif [ "$RESPONSE_TIME" = "0" ]; then
+    log_message "ERROR: Health check failed - no response"
+fi
+
+# Check worker processes
+WORKER_COUNT=$(ps aux | grep -c '[n]ginx: worker process')
+if [ "$WORKER_COUNT" -eq 0 ]; then
+    log_message "ERROR: No nginx worker processes found"
+fi
+
+# Log current status
+log_message "INFO: Nginx monitoring check completed - Workers: $WORKER_COUNT, Response time: ${RESPONSE_TIME}s"
+
+# Rotate log file if it gets too large (>10MB)
+if [ -f "$LOG_FILE" ] && [ $(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo 0) -gt 10485760 ]; then
+    tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp"
+    mv "${LOG_FILE}.tmp" "$LOG_FILE"
+    log_message "INFO: Log file rotated"
+fi 
