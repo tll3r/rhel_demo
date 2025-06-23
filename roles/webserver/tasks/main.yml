@@ -64,25 +64,29 @@
     mode: '0644'
   notify: restart httpd
 
-- name: Ensure PHP module is loaded in Apache
-  lineinfile:
-    path: /etc/httpd/conf.modules.d/10-php.conf
-    line: "LoadModule php_module modules/libphp.so"
-    state: present
-  notify: restart httpd
-
-- name: Configure PHP file handling in Apache
+- name: Ensure PHP is configured in Apache (Fedora compatible)
   blockinfile:
     path: /etc/httpd/conf.d/php.conf
     create: yes
     block: |
+      # Load PHP module
+      LoadModule php_module modules/libphp.so
+      
+      # PHP file handling
       <FilesMatch \.php$>
           SetHandler application/x-httpd-php
+      </FilesMatch>
+      
+      # Prevent access to .php files as plain text if PHP module is not loaded
+      <FilesMatch "\.ph(p[3457]?|t|tml)$">
+          Require all denied
       </FilesMatch>
     owner: root
     group: root
     mode: '0644'
   notify: restart httpd
+
+
 
 - name: Create web application files
   template:
