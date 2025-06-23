@@ -65,23 +65,25 @@
   notify: restart httpd
 
 - name: Configure PHP-FPM with Apache (Fedora)
-  blockinfile:
-    path: /etc/httpd/conf.d/php.conf
-    create: yes
-    block: |
-      # Enable PHP-FPM for Fedora
+  copy:
+    dest: /etc/httpd/conf.d/php.conf
+    content: |
+      # PHP-FPM Configuration for Fedora
+      DirectoryIndex index.html index.php
+      
+      # Load required modules
+      LoadModule proxy_module modules/mod_proxy.so
+      LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
+      
+      # PHP-FPM Handler
       <FilesMatch \.php$>
           SetHandler "proxy:fcgi://127.0.0.1:9000"
       </FilesMatch>
       
-      # Add PHP index files
-      <IfModule mod_dir.c>
-          DirectoryIndex index.html index.php
-      </IfModule>
-      
-      # Enable proxy module
-      LoadModule proxy_module modules/mod_proxy.so
-      LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
+      # Correct path mapping for our app
+      <LocationMatch "\.php$">
+          ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/var/www/html/rhel-demo-app/$1
+      </LocationMatch>
     owner: root
     group: root
     mode: '0644'
@@ -105,6 +107,14 @@
     name: php-fpm
     enabled: yes
     state: started
+
+- name: Restart services to apply PHP configuration
+  systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - php-fpm
+    - httpd
 
 
 
