@@ -8,11 +8,17 @@
       - iftop
       - sysstat
       - collectd
-      - collectd-httpd
-      - collectd-mysql
-      - collectd-nginx
     state: present
     update_cache: yes
+
+- name: Install collectd plugins (Fedora compatible)
+  dnf:
+    name:
+      - collectd-mysql
+      - collectd-web
+    state: present
+    update_cache: yes
+  ignore_errors: yes
 
 - name: Configure system monitoring
   template:
