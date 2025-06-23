@@ -4,7 +4,6 @@
     name:
       - mariadb-server
       - mariadb
-      - mariadb-connector-python3
       - python3-mysql
     state: present
     update_cache: yes
