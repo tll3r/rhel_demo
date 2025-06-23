@@ -10,7 +10,7 @@
     app_group: "appgroup"
     web_port: 8080
     db_port: 3306
-    lb_port: 80
+    lb_port: 8000
     
   pre_tasks:
     - name: Update system packages
