@@ -1,0 +1,33 @@
+# Red Hat Demo Logwatch Configuration
+
+# Output format
+Output = mail
+Format = html
+MailTo = root
+MailFrom = logwatch@{{ ansible_hostname }}
+Range = yesterday
+Detail = High
+Service = All
+Service = "-sshd"
+Service = "-http"
+Service = "-mysql"
+Service = "-nginx"
+
+# Application specific logs
+LogFile = /var/log/{{ app_name }}/*.log
+LogFile = /opt/{{ app_name }}/logs/*.log
+
+# System logs
+LogFile = /var/log/messages
+LogFile = /var/log/secure
+LogFile = /var/log/audit/audit.log
+LogFile = /var/log/firewalld
+LogFile = /var/log/selinux/audit.log
+
+# Service logs
+LogFile = /var/log/httpd/*.log
+LogFile = /var/log/nginx/*.log
+LogFile = /var/log/mariadb/*.log
+
+# Container logs
+LogFile = /var/log/containers/*.log 

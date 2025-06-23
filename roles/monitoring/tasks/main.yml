@@ -1,0 +1,145 @@
+---
+- name: Install monitoring packages
+  dnf:
+    name:
+      - htop
+      - iotop
+      - nethogs
+      - iftop
+      - sysstat
+      - collectd
+      - collectd-httpd
+      - collectd-mysql
+      - collectd-nginx
+    state: present
+    update_cache: yes
+
+- name: Configure system monitoring
+  template:
+    src: collectd.conf.j2
+    dest: /etc/collectd.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart collectd
+
+- name: Start and enable collectd
+  systemd:
+    name: collectd
+    enabled: yes
+    state: started
+
+- name: Configure system statistics
+  template:
+    src: sysstat.j2
+    dest: /etc/sysconfig/sysstat
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable sysstat service
+  systemd:
+    name: sysstat
+    enabled: yes
+    state: started
+
+- name: Create monitoring dashboard
+  template:
+    src: dashboard.html.j2
+    dest: /var/www/html/{{ app_name }}/dashboard.html
+    owner: apache
+    group: apache
+    mode: '0644'
+
+- name: Create system monitoring script
+  template:
+    src: system_monitor.sh.j2
+    dest: /opt/{{ app_name }}/scripts/system_monitor.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create service monitoring script
+  template:
+    src: service_monitor.sh.j2
+    dest: /opt/{{ app_name }}/scripts/service_monitor.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create monitoring cron jobs
+  cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    job: "{{ item.job }}"
+    state: present
+  loop:
+    - { name: "System Monitoring", minute: "*/1", job: "/opt/{{ app_name }}/scripts/system_monitor.sh" }
+    - { name: "Service Monitoring", minute: "*/2", job: "/opt/{{ app_name }}/scripts/service_monitor.sh" }
+    - { name: "Performance Monitoring", minute: "*/5", job: "sar -u 1 1 > /var/log/{{ app_name }}/cpu.log" }
+
+- name: Create log aggregation script
+  template:
+    src: log_aggregator.sh.j2
+    dest: /opt/{{ app_name }}/scripts/log_aggregator.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create log aggregation cron job
+  cron:
+    name: "Log Aggregation"
+    minute: "*/10"
+    job: "/opt/{{ app_name }}/scripts/log_aggregator.sh"
+    state: present
+
+- name: Configure log monitoring
+  template:
+    src: logwatch.conf.j2
+    dest: /etc/logwatch/conf/services/{{ app_name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create alerting script
+  template:
+    src: alert.sh.j2
+    dest: /opt/{{ app_name }}/scripts/alert.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create performance baseline
+  template:
+    src: baseline.sh.j2
+    dest: /opt/{{ app_name }}/scripts/baseline.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Run performance baseline
+  command: /opt/{{ app_name }}/scripts/baseline.sh
+  register: baseline_result
+  changed_when: false
+
+- name: Display baseline results
+  debug:
+    msg: "Performance baseline completed: {{ baseline_result.stdout_lines }}"
+
+- name: Create monitoring API endpoint
+  template:
+    src: monitoring_api.php.j2
+    dest: /var/www/html/{{ app_name }}/api/monitoring.php
+    owner: apache
+    group: apache
+    mode: '0644'
+
+- name: Test monitoring endpoint
+  uri:
+    url: "http://localhost:{{ web_port }}/{{ app_name }}/api/monitoring.php"
+    method: GET
+    status_code: 200
+  register: monitoring_test
+  retries: 3
+  delay: 5
+  until: monitoring_test.status == 200 

@@ -1,0 +1,116 @@
+---
+- name: Create application user and group
+  block:
+    - name: Create application group
+      group:
+        name: "{{ app_group }}"
+        state: present
+        system: yes
+    
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        group: "{{ app_group }}"
+        system: yes
+        shell: /sbin/nologin
+        home: /opt/{{ app_name }}
+        create_home: yes
+        state: present
+    
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+        state: directory
+      loop:
+        - /opt/{{ app_name }}
+        - /opt/{{ app_name }}/config
+        - /opt/{{ app_name }}/logs
+        - /opt/{{ app_name }}/data
+        - /var/log/{{ app_name }}
+
+- name: Install and configure Podman
+  block:
+    - name: Install Podman and related packages
+      dnf:
+        name:
+          - podman
+          - podman-compose
+          - buildah
+          - skopeo
+          - containers-common
+        state: present
+        update_cache: yes
+    
+    - name: Configure Podman for rootless containers
+      lineinfile:
+        path: /etc/subuid
+        line: "{{ app_user }}:100000:65536"
+        state: present
+      when: podman_user == "rootless"
+    
+    - name: Configure Podman subgid
+      lineinfile:
+        path: /etc/subgid
+        line: "{{ app_group }}:100000:65536"
+        state: present
+      when: podman_user == "rootless"
+    
+    - name: Enable Podman socket
+      systemd:
+        name: podman.socket
+        enabled: yes
+        state: started
+
+- name: Configure systemd journal
+  block:
+    - name: Create journald configuration
+      template:
+        src: journald.conf.j2
+        dest: /etc/systemd/journald.conf
+        owner: root
+        group: root
+        mode: '0644'
+    
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+- name: Configure system limits
+  block:
+    - name: Set system limits for application user
+      pam_limits:
+        domain: "{{ app_user }}"
+        limit_type: '-'
+        limit_item: nofile
+        value: '65536'
+    
+    - name: Configure system-wide limits
+      lineinfile:
+        path: /etc/security/limits.conf
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "* soft nofile 65536"
+        - "* hard nofile 65536"
+        - "* soft nproc 32768"
+        - "* hard nproc 32768"
+
+- name: Configure timezone and locale
+  block:
+    - name: Set timezone
+      timezone:
+        name: UTC
+    
+    - name: Configure locale
+      locale_gen:
+        name: en_US.UTF-8
+        state: present
+    
+    - name: Set system locale
+      lineinfile:
+        path: /etc/environment
+        line: "LANG=en_US.UTF-8"
+        state: present 

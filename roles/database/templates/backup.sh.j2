@@ -1,0 +1,63 @@
+#!/bin/bash
+# Red Hat Demo - MariaDB Backup Script
+
+# Configuration
+BACKUP_DIR="/opt/{{ app_name }}/backups"
+MYSQL_USER="root"
+MYSQL_PASSWORD="{{ mysql_root_password | default('RedHatDemo123!') }}"
+MYSQL_DATABASE="{{ app_name }}"
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/mysql_backup_${DATE}.sql"
+RETENTION_DAYS=7
+
+# Create backup directory if it doesn't exist
+mkdir -p "${BACKUP_DIR}"
+
+# Log function
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a /var/log/{{ app_name }}/backup.log
+}
+
+# Start backup
+log "Starting MariaDB backup for database: ${MYSQL_DATABASE}"
+
+# Perform backup
+mysqldump --user="${MYSQL_USER}" \
+          --password="${MYSQL_PASSWORD}" \
+          --single-transaction \
+          --routines \
+          --triggers \
+          --events \
+          --hex-blob \
+          "${MYSQL_DATABASE}" > "${BACKUP_FILE}"
+
+# Check if backup was successful
+if [ $? -eq 0 ]; then
+    log "Backup completed successfully: ${BACKUP_FILE}"
+    
+    # Compress backup
+    gzip "${BACKUP_FILE}"
+    log "Backup compressed: ${BACKUP_FILE}.gz"
+    
+    # Clean up old backups
+    find "${BACKUP_DIR}" -name "mysql_backup_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+    log "Cleaned up backups older than ${RETENTION_DAYS} days"
+    
+    # Update system info table
+    mysql --user="${MYSQL_USER}" --password="${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" << EOF
+INSERT INTO system_info (hostname, uptime, load_average, memory_usage) 
+VALUES (
+    '$(hostname)', 
+    '$(uptime -p)', 
+    '$(cat /proc/loadavg | awk '{print $1, $2, $3}')', 
+    '$(free -h | grep Mem | awk '{print $3 "/" $2}')'
+);
+EOF
+    
+    log "System info updated in database"
+else
+    log "ERROR: Backup failed!"
+    exit 1
+fi
+
+log "Backup process completed" 

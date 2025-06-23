@@ -1,0 +1,69 @@
+[mysqld]
+# Red Hat Demo MariaDB Configuration
+
+# Basic Settings
+user = mysql
+pid-file = /var/run/mysqld/mysqld.pid
+socket = /var/lib/mysql/mysql.sock
+port = {{ db_port }}
+basedir = /usr
+datadir = /opt/{{ app_name }}/data/mysql
+tmpdir = /tmp
+lc-messages-dir = /usr/share/mysql
+
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Connection Settings
+max_connections = 200
+max_connect_errors = 1000
+table_open_cache = 2000
+max_allowed_packet = 16M
+binlog_cache_size = 1M
+max_heap_table_size = 8M
+tmp_table_size = 16M
+
+# Query Cache
+query_cache_type = 1
+query_cache_size = 8M
+query_cache_limit = 2M
+
+# InnoDB Settings
+default-storage-engine = InnoDB
+innodb_buffer_pool_size = 128M
+innodb_log_file_size = 64M
+innodb_file_per_table = 1
+innodb_open_files = 400
+innodb_io_capacity = 400
+innodb_flush_method = O_DIRECT
+
+# Logging
+log-error = /var/log/mariadb/mysqld.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mariadb/slow.log
+long_query_time = 2
+
+# Security
+local_infile = 0
+skip_symbolic_links = 1
+
+# Performance
+key_buffer_size = 32M
+read_buffer_size = 2M
+read_rnd_buffer_size = 8M
+myisam_sort_buffer_size = 8M
+thread_cache_size = 8
+sort_buffer_size = 2M
+
+# Replication
+server-id = 1
+log_bin = /var/log/mariadb/mysql-bin.log
+binlog_format = ROW
+expire_logs_days = 7
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4 

@@ -1,0 +1,124 @@
+---
+- name: Install Apache HTTPD and PHP
+  dnf:
+    name:
+      - httpd
+      - php
+      - php-mysqlnd
+      - php-json
+      - php-mbstring
+      - php-xml
+      - php-gd
+      - php-curl
+      - mod_ssl
+      - mod_rewrite
+    state: present
+    update_cache: yes
+
+- name: Create web application directory
+  file:
+    path: /var/www/html/{{ app_name }}
+    owner: apache
+    group: apache
+    mode: '0755'
+    state: directory
+
+- name: Configure Apache HTTPD
+  template:
+    src: httpd.conf.j2
+    dest: /etc/httpd/conf.d/{{ app_name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart httpd
+
+- name: Configure PHP
+  template:
+    src: php.ini.j2
+    dest: /etc/php.ini
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart httpd
+
+- name: Create web application files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: apache
+    group: apache
+    mode: "{{ item.mode | default('0644') }}"
+  loop:
+    - { src: 'index.php.j2', dest: '/var/www/html/{{ app_name }}/index.php' }
+    - { src: 'config.php.j2', dest: '/var/www/html/{{ app_name }}/config.php' }
+    - { src: 'api.php.j2', dest: '/var/www/html/{{ app_name }}/api.php' }
+    - { src: 'style.css.j2', dest: '/var/www/html/{{ app_name }}/style.css' }
+    - { src: 'script.js.j2', dest: '/var/www/html/{{ app_name }}/script.js' }
+
+- name: Create systemd service for web application
+  template:
+    src: httpd-app.service.j2
+    dest: /etc/systemd/system/httpd-app.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Start and enable Apache HTTPD
+  systemd:
+    name: httpd
+    enabled: yes
+    state: started
+
+- name: Configure SELinux for web application
+  sefcontext:
+    target: '{{ item }}'
+    setype: httpd_exec_t
+    state: present
+  loop:
+    - '/var/www/html/{{ app_name }}(/.*)?'
+    - '/opt/{{ app_name }}/web(/.*)?'
+
+- name: Apply SELinux context
+  command: restorecon -Rv /var/www/html/{{ app_name }}
+  when: ansible_selinux.status == "enabled"
+
+- name: Create web application monitoring script
+  template:
+    src: monitor_web.sh.j2
+    dest: /opt/{{ app_name }}/scripts/monitor_web.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create monitoring cron job
+  cron:
+    name: "Web Application Monitoring"
+    minute: "*/5"
+    job: "/opt/{{ app_name }}/scripts/monitor_web.sh"
+    state: present
+
+- name: Configure log rotation for web application
+  template:
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/{{ app_name }}-web
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create health check endpoint
+  template:
+    src: health.php.j2
+    dest: /var/www/html/{{ app_name }}/health.php
+    owner: apache
+    group: apache
+    mode: '0644'
+
+- name: Test web application
+  uri:
+    url: "http://localhost:{{ web_port }}/{{ app_name }}/health.php"
+    method: GET
+    status_code: 200
+  register: health_check
+  retries: 3
+  delay: 10
+  until: health_check.status == 200 

@@ -1,0 +1,106 @@
+---
+- name: Install Nginx
+  dnf:
+    name:
+      - nginx
+      - nginx-mod-stream
+      - nginx-mod-http-headers-more-filter
+    state: present
+    update_cache: yes
+
+- name: Create Nginx configuration directory
+  file:
+    path: /etc/nginx/conf.d
+    state: directory
+    mode: '0755'
+
+- name: Configure Nginx main configuration
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+
+- name: Configure Nginx virtual host
+  template:
+    src: default.conf.j2
+    dest: /etc/nginx/conf.d/{{ app_name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+
+- name: Create Nginx log directory
+  file:
+    path: /var/log/nginx/{{ app_name }}
+    state: directory
+    mode: '0755'
+
+- name: Configure SELinux for Nginx
+  sefcontext:
+    target: '/var/log/nginx/{{ app_name }}(/.*)?'
+    setype: httpd_log_t
+    state: present
+  when: ansible_selinux.status == "enabled"
+
+- name: Apply SELinux context for Nginx logs
+  command: restorecon -Rv /var/log/nginx/{{ app_name }}
+  when: ansible_selinux.status == "enabled"
+
+- name: Start and enable Nginx
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: Create Nginx monitoring script
+  template:
+    src: monitor_nginx.sh.j2
+    dest: /opt/{{ app_name }}/scripts/monitor_nginx.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create Nginx monitoring cron job
+  cron:
+    name: "Nginx Monitoring"
+    minute: "*/2"
+    job: "/opt/{{ app_name }}/scripts/monitor_nginx.sh"
+    state: present
+
+- name: Configure log rotation for Nginx
+  template:
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/{{ app_name }}-nginx
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create health check for Nginx
+  template:
+    src: health.html.j2
+    dest: /usr/share/nginx/html/health.html
+    owner: nginx
+    group: nginx
+    mode: '0644'
+
+- name: Test Nginx configuration
+  command: nginx -t
+  register: nginx_test
+  changed_when: false
+
+- name: Display Nginx test results
+  debug:
+    msg: "{{ nginx_test.stdout_lines }}"
+
+- name: Test Nginx health endpoint
+  uri:
+    url: "http://localhost:{{ lb_port }}/health.html"
+    method: GET
+    status_code: 200
+  register: nginx_health
+  retries: 3
+  delay: 5
+  until: nginx_health.status == 200 

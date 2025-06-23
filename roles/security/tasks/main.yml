@@ -1,0 +1,186 @@
+---
+- name: Configure firewalld
+  block:
+    - name: Install and enable firewalld
+      dnf:
+        name: firewalld
+        state: present
+    
+    - name: Enable and start firewalld
+      systemd:
+        name: firewalld
+        enabled: yes
+        state: started
+    
+    - name: Configure default zone
+      firewalld:
+        zone: "{{ firewall_default_zone }}"
+        permanent: yes
+        state: enabled
+    
+    - name: Add services to firewall
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - ssh
+        - http
+        - https
+        - mysql
+    
+    - name: Add custom ports to firewall
+      firewalld:
+        port: "{{ item.port }}/{{ item.protocol }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - { port: "{{ web_port }}", protocol: "tcp" }
+        - { port: "{{ db_port }}", protocol: "tcp" }
+        - { port: "{{ lb_port }}", protocol: "tcp" }
+    
+    - name: Configure rich rules for application access
+      firewalld:
+        rich_rule: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - "rule family=ipv4 source address=127.0.0.1 accept"
+        - "rule family=ipv4 source address=::1 accept"
+
+- name: Configure SELinux
+  block:
+    - name: Check SELinux status
+      command: getenforce
+      register: selinux_status
+      changed_when: false
+    
+    - name: Set SELinux mode
+      seboolean:
+        name: "{{ item }}"
+        state: yes
+        persistent: yes
+      loop:
+        - httpd_can_network_connect
+        - httpd_can_network_connect_db
+        - httpd_exec_mem
+        - httpd_setrlimit
+        - httpd_ssi_exec
+        - httpd_tty_comm
+        - httpd_unified
+        - httpd_use_cifs
+        - httpd_use_nfs
+        - mysql_connect_any
+        - nis_enabled
+        - use_fusefs_home_dirs
+        - use_nfs_home_dirs
+        - use_samba_home_dirs
+      when: selinux_status.stdout == "Enforcing"
+    
+    - name: Create SELinux policy for application
+      template:
+        src: rhel-demo.te.j2
+        dest: /tmp/rhel-demo.te
+        mode: '0644'
+      when: selinux_status.stdout == "Enforcing"
+    
+    - name: Compile SELinux policy
+      command: make -f /usr/share/selinux/devel/Makefile rhel-demo.pp
+      args:
+        chdir: /tmp
+      when: selinux_status.stdout == "Enforcing"
+    
+    - name: Install SELinux policy
+      command: semodule -i rhel-demo.pp
+      args:
+        chdir: /tmp
+      when: selinux_status.stdout == "Enforcing"
+
+- name: Configure system security
+  block:
+    - name: Install security packages
+      dnf:
+        name:
+          - audit
+          - audit-libs
+          - setroubleshoot
+          - setroubleshoot-server
+        state: present
+    
+    - name: Enable auditd service
+      systemd:
+        name: auditd
+        enabled: yes
+        state: started
+    
+    - name: Configure audit rules
+      template:
+        src: audit.rules.j2
+        dest: /etc/audit/rules.d/rhel-demo.rules
+        owner: root
+        group: root
+        mode: '0640'
+    
+    - name: Restart auditd
+      systemd:
+        name: auditd
+        state: restarted
+
+- name: Configure system hardening
+  block:
+    - name: Set secure umask
+      lineinfile:
+        path: /etc/profile
+        line: "umask 027"
+        state: present
+    
+    - name: Configure password policy
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "minlen = 12"
+        - "minclass = 3"
+        - "maxrepeat = 3"
+        - "gecoscheck = 1"
+        - "badwords = password 123456 qwerty"
+    
+    - name: Configure login security
+      lineinfile:
+        path: /etc/security/access.conf
+        line: "-:ALL EXCEPT root :ALL"
+        state: present
+    
+    - name: Set password expiration
+      lineinfile:
+        path: /etc/login.defs
+        regexp: "^PASS_MAX_DAYS"
+        line: "PASS_MAX_DAYS 90"
+        state: present
+
+- name: Configure log monitoring
+  block:
+    - name: Install logwatch
+      dnf:
+        name: logwatch
+        state: present
+    
+    - name: Configure logwatch
+      template:
+        src: logwatch.conf.j2
+        dest: /etc/logwatch/conf/logwatch.conf
+        owner: root
+        group: root
+        mode: '0644'
+    
+    - name: Create logwatch cron job
+      cron:
+        name: "Daily Logwatch Report"
+        hour: "6"
+        minute: "0"
+        job: "/usr/sbin/logwatch --output mail --mailto root --detail high"
+        state: present 

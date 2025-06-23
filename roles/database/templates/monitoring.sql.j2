@@ -1,0 +1,61 @@
+-- Red Hat Demo - MariaDB Monitoring Queries
+
+-- Database size information
+SELECT 
+    table_schema AS 'Database',
+    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)'
+FROM information_schema.tables 
+WHERE table_schema = '{{ app_name }}'
+GROUP BY table_schema;
+
+-- Table sizes
+SELECT 
+    table_name AS 'Table',
+    ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)',
+    table_rows AS 'Rows'
+FROM information_schema.tables 
+WHERE table_schema = '{{ app_name }}'
+ORDER BY (data_length + index_length) DESC;
+
+-- Connection status
+SHOW STATUS LIKE 'Threads_connected';
+SHOW STATUS LIKE 'Max_used_connections';
+SHOW STATUS LIKE 'Connections';
+
+-- Performance metrics
+SHOW STATUS LIKE 'Slow_queries';
+SHOW STATUS LIKE 'Questions';
+SHOW STATUS LIKE 'Uptime';
+
+-- InnoDB status
+SHOW ENGINE INNODB STATUS;
+
+-- Process list
+SHOW PROCESSLIST;
+
+-- User statistics
+SELECT 
+    user,
+    host,
+    COUNT(*) as connections
+FROM information_schema.processlist 
+GROUP BY user, host;
+
+-- Recent system info
+SELECT 
+    hostname,
+    uptime,
+    load_average,
+    memory_usage,
+    timestamp
+FROM {{ app_name }}.system_info 
+ORDER BY timestamp DESC 
+LIMIT 10;
+
+-- Database growth over time
+SELECT 
+    DATE(timestamp) as date,
+    COUNT(*) as records_added
+FROM {{ app_name }}.system_info 
+GROUP BY DATE(timestamp)
+ORDER BY date DESC; 

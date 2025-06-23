@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Hat Tools Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐧 Red Hat Tools Demo</h1>
+            <p>Showcasing RHEL technologies and Ansible automation</p>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#tools">Tools</a></li>
+                <li><a href="#status">Status</a></li>
+                <li><a href="#monitoring">Monitoring</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="overview">
+                <h2>🎯 Demo Overview</h2>
+                <div class="card">
+                    <h3>Multi-tier Application Architecture</h3>
+                    <div class="architecture">
+                        <div class="tier">
+                            <h4>Load Balancer (Nginx)</h4>
+                            <p>Port: {{ lb_port }}</p>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="tier">
+                            <h4>Web Server (Apache)</h4>
+                            <p>Port: {{ web_port }}</p>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="tier">
+                            <h4>Database (MariaDB)</h4>
+                            <p>Port: {{ db_port }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tools">
+                <h2>🛠️ Red Hat Tools Showcase</h2>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h3>Ansible</h3>
+                        <p>Configuration management and automation</p>
+                        <ul>
+                            <li>Playbook-driven deployment</li>
+                            <li>Role-based organization</li>
+                            <li>Idempotent operations</li>
+                        </ul>
+                    </div>
+                    <div class="tool-card">
+                        <h3>Podman</h3>
+                        <p>Container management (Docker alternative)</p>
+                        <ul>
+                            <li>Rootless containers</li>
+                            <li>systemd integration</li>
+                            <li>Enhanced security</li>
+                        </ul>
+                    </div>
+                    <div class="tool-card">
+                        <h3>systemd</h3>
+                        <p>Service and process management</p>
+                        <ul>
+                            <li>Service lifecycle</li>
+                            <li>Dependency management</li>
+                            <li>Logging with journald</li>
+                        </ul>
+                    </div>
+                    <div class="tool-card">
+                        <h3>firewalld</h3>
+                        <p>Dynamic firewall management</p>
+                        <ul>
+                            <li>Zone-based configuration</li>
+                            <li>Runtime rule changes</li>
+                            <li>Rich rule support</li>
+                        </ul>
+                    </div>
+                    <div class="tool-card">
+                        <h3>SELinux</h3>
+                        <p>Security-Enhanced Linux</p>
+                        <ul>
+                            <li>Mandatory access control</li>
+                            <li>Context-based security</li>
+                            <li>Policy enforcement</li>
+                        </ul>
+                    </div>
+                    <div class="tool-card">
+                        <h3>dnf</h3>
+                        <p>Package management</p>
+                        <ul>
+                            <li>Dependency resolution</li>
+                            <li>Repository management</li>
+                            <li>Transaction history</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="status">
+                <h2>📊 System Status</h2>
+                <div id="status-content">
+                    <div class="loading">Loading system status...</div>
+                </div>
+            </section>
+
+            <section id="monitoring">
+                <h2>📈 Real-time Monitoring</h2>
+                <div class="monitoring-grid">
+                    <div class="metric-card">
+                        <h3>System Load</h3>
+                        <div id="load-average" class="metric">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Memory Usage</h3>
+                        <div id="memory-usage" class="metric">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Disk Usage</h3>
+                        <div id="disk-usage" class="metric">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Network</h3>
+                        <div id="network-status" class="metric">--</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Red Hat Tools Demo | Built with ❤️ using RHEL technologies</p>
+            <p>Host: {{ ansible_hostname }} | Uptime: <span id="uptime">--</span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

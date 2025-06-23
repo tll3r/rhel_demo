@@ -1,0 +1,79 @@
+---
+- name: Red Hat Tools Demo - Multi-tier Application Deployment
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    app_name: "rhel-demo-app"
+    app_user: "appuser"
+    app_group: "appgroup"
+    web_port: 8080
+    db_port: 3306
+    lb_port: 80
+    
+  pre_tasks:
+    - name: Update system packages
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      tags: [system, packages]
+    
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+      tags: [system, packages]
+    
+    - name: Install common utilities
+      dnf:
+        name:
+          - vim
+          - wget
+          - curl
+          - net-tools
+          - tree
+          - htop
+          - jq
+        state: present
+      tags: [system, packages]
+
+  roles:
+    - role: common
+    - role: security
+    - role: database
+    - role: webserver
+    - role: loadbalancer
+    - role: monitoring
+
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg: |
+          🎉 Red Hat Tools Demo Deployment Complete!
+          
+          📊 Application Status:
+          - Load Balancer: http://{{ ansible_default_ipv4.address }}:{{ lb_port }}
+          - Web Server: http://{{ ansible_default_ipv4.address }}:{{ web_port }}
+          - Database: {{ ansible_default_ipv4.address }}:{{ db_port }}
+          
+          🔧 Useful Commands:
+          - Check services: systemctl status nginx httpd mariadb
+          - View logs: journalctl -u nginx -f
+          - Container status: podman ps
+          - Firewall status: firewall-cmd --list-all
+          - SELinux status: getenforce
+          
+          📚 Next Steps:
+          1. Access the application at http://{{ ansible_default_ipv4.address }}
+          2. Explore the Ansible roles in the roles/ directory
+          3. Modify configurations and re-run the playbook
+          4. Check out the troubleshooting guide
+      
+    - name: Create demo completion marker
+      file:
+        path: /tmp/rhel_demo_completed
+        state: touch
+        mode: '0644'
+      tags: [demo, marker] 

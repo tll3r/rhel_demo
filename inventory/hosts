@@ -1,0 +1,55 @@
+[all:vars]
+ansible_user=root
+ansible_connection=local
+ansible_python_interpreter=/usr/bin/python3
+
+# Red Hat Demo Variables
+demo_environment=production
+demo_version=1.0.0
+
+# Application Configuration
+app_name=rhel-demo-app
+app_user=appuser
+app_group=appgroup
+
+# Network Configuration
+web_port=8080
+db_port=3306
+lb_port=80
+
+# Security Settings
+selinux_mode=enforcing
+firewall_default_zone=public
+
+# Container Settings
+podman_user=rootless
+container_registry=registry.redhat.io
+
+[webservers]
+localhost ansible_connection=local
+
+[dbservers]
+localhost ansible_connection=local
+
+[loadbalancers]
+localhost ansible_connection=local
+
+[monitoring]
+localhost ansible_connection=local
+
+# Group Variables
+[webservers:vars]
+service_type=web
+container_image=httpd:2.4
+
+[dbservers:vars]
+service_type=database
+container_image=mariadb:10.5
+
+[loadbalancers:vars]
+service_type=loadbalancer
+container_image=nginx:1.20
+
+[monitoring:vars]
+service_type=monitoring
+container_image=prom/prometheus:latest 

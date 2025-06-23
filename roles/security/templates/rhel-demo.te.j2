@@ -1,0 +1,54 @@
+policy_module(rhel-demo, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+type rhel_demo_t;
+type rhel_demo_exec_t;
+init_daemon_domain(rhel_demo_t, rhel_demo_exec_t)
+
+type rhel_demo_data_t;
+files_type(rhel_demo_data_t)
+
+type rhel_demo_log_t;
+logging_log_file(rhel_demo_log_t)
+
+type rhel_demo_tmp_t;
+files_tmp_file(rhel_demo_tmp_t)
+
+########################################
+#
+# rhel_demo local policy
+#
+
+allow rhel_demo_t self:capability { setuid setgid dac_override dac_read_search };
+allow rhel_demo_t self:process { signal_perms };
+allow rhel_demo_t self:unix_stream_socket { connectto };
+
+# Allow rhel_demo to read/write its own data
+allow rhel_demo_t rhel_demo_data_t:dir { create_dir_perms };
+allow rhel_demo_t rhel_demo_data_t:file { create_file_perms };
+
+# Allow rhel_demo to write to its own logs
+allow rhel_demo_t rhel_demo_log_t:file { append_file_perms };
+
+# Allow rhel_demo to use tmp files
+allow rhel_demo_t rhel_demo_tmp_t:file { create_file_perms };
+
+# Allow rhel_demo to bind to network ports
+allow rhel_demo_t self:tcp_socket { name_bind };
+
+# Allow rhel_demo to connect to database
+allow rhel_demo_t mysqld_port_t:tcp_socket { name_connect };
+
+# Allow rhel_demo to read system information
+allow rhel_demo_t proc_t:dir { search };
+allow rhel_demo_t proc_t:file { read };
+
+# Allow rhel_demo to read configuration files
+allow rhel_demo_t etc_t:file { read getattr };
+
+# Allow rhel_demo to use shared libraries
+can_exec(rhel_demo_t, lib_t) 
