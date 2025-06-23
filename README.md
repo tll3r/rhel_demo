@@ -1,120 +1,120 @@
-# Red Hat Tools Demo
+# Red Hat Tools Demo 🚀
 
-> **⚠️ Work in Progress**  
-> This demo is currently under active development and testing. Some components may not work as expected, and the configuration is being optimized for Fedora compatibility. Please check the troubleshooting guide for known issues and workarounds.
+> **TL;DR (60 sec read)**  
+> *Automated multi-tier application deployed with one command.*  
+> Uses **Ansible** to configure **Nginx** (load-balancer :8000), **Apache HTTPD** :8080, **MariaDB** :3306, system hardening (SELinux, firewalld) **and** a live dashboard – all on vanilla Fedora/RHEL.  
+> Clone → `ansible-playbook playbook.yml` → open <http://localhost:8080> and watch the status cards turn green.
 
-This demo showcases common Red Hat Enterprise Linux (RHEL) tools and technologies, with a focus on Ansible automation. The demo deploys a simple multi-tier web application using Red Hat best practices.
+---
 
-## What This Demo Covers
+## 1 Why does this project exist? 🤔
 
-### 🎯 Core Red Hat Tools
-- **Ansible** - Configuration management and automation
-- **Podman** - Container management (Red Hat's Docker alternative)
-- **systemd** - Service and process management
-- **firewalld** - Dynamic firewall management
-- **SELinux** - Security-Enhanced Linux
-- **dnf** - Package management
+I built this repository as a **portfolio piece** to demonstrate hands-on competence with daily RHEL administration tasks **and** modern automation practices:
 
-### 🏗️ Architecture
+* Designing idempotent, role-based **Ansible** playbooks
+* Operating system hardening with **SELinux** & **firewalld**
+* Service management via **systemd**
+* Root-less container workflows with **Podman**
+* Lightweight monitoring & troubleshooting
+
+Everything is reproducible – wipe the VM, run the playbook again, get the exact same result.  
+*(Great for demos, workshops, interviews or your own learning.)*
+
+---
+
+## 2 Full overview 📝
+
+### 2.1 Stack & features
+
+| Tier | Component | Purpose |
+|------|-----------|---------|
+| Load Balancer | **Nginx** `:8000` | SSL termination & simple round-robin (future multi-web support) |
+| Application | **Apache HTTPD + PHP-FPM** `:8080` | Serves a micro PHP dashboard & REST API |
+| Database | **MariaDB** `:3306` | Persists demo data |
+| Monitoring | **Custom dashboard + system scripts** | Live CPU/Memory/Disk, service health |
+| Automation | **Ansible** | One-click provisioning on Fedora/RHEL |
+| Security | **SELinux / firewalld** | Enforced, no ports left open by accident |
+
+### 2.2 Architecture diagram
+
+```text
+┌──────────────┐    8000/tcp    ┌──────────────┐    8080/tcp    ┌──────────────┐
+│  Nginx LB    │ ───────────▶  │  Apache/PHP   │ ───────────▶  │  MariaDB      │
+│ (Container)  │               │  Dashboard    │               │  Database     │
+└──────────────┘               └──────────────┘               └──────────────┘
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Load Balancer │    │   Web Server    │    │   Database      │
-│   (nginx)       │───▶│   (httpd)       │───▶│   (mariadb)     │
-│   Port: 80      │    │   Port: 8080    │    │   Port: 3306    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+
+### 2.3 What the playbook does
+
+1. **Common** – Creates dedicated `appuser`/`appgroup`, sets limits, timezone, etc.
+2. **Security** – Enables firewalld zones & persistent SELinux contexts.
+3. **Database** – Installs & secures MariaDB, creates schema if required.
+4. **Webserver** – Configures Apache + PHP-FPM, deploys the dashboard & API.
+5. **Load-balancer** – Deploys Nginx, forwards to the web tier.
+6. **Monitoring** – Installs collectd/sysstat, cron scripts, and exposes `/api.php?endpoint=status` consumed by the dashboard.
+
+All tasks are **idempotent** and tagged – run `--tags webserver` to redeploy only that tier.
+
+---
+
+## 3 Getting started 🏁
+
+### 3.1 Prerequisites
+
+* Fedora 38/39/40, RHEL 8/9 or compatible
+* `python3` + `ansible-core` ≥ 2.13
+* Passwordless *sudo* (or run as root)
+
+### 3.2 Quick start (local single-host demo)
+
+```bash
+# Clone
+$ git clone https://github.com/<your-fork>/rhel_demo.git
+$ cd rhel_demo
+
+# Install deps (Fedora example)
+$ sudo dnf install -y ansible-core podman httpd nginx mariadb-server jq
+
+# Inventory already points to localhost
+$ ansible-playbook -i inventory/hosts playbook.yml
+
+# Open the app
+$ xdg-open http://localhost:8080  # or point your browser manually
 ```
 
-## Prerequisites
+When the page loads you should quickly see *System Status* cards flash green.
 
-- RHEL 8/9 or CentOS 8/9 system
-- Python 3.6+
-- Ansible 2.9+
-- Podman
-- Root or sudo access
+### 3.3 Tearing down / resetting
 
-## Quick Start
+```bash
+$ sudo systemctl stop nginx httpd mariadb
+$ sudo dnf remove -y nginx httpd mariadb-server
+$ sudo rm -rf /var/www/html/rhel-demo-app /opt/rhel-demo-app /var/log/rhel-demo-app
+```
 
-1. **Clone and setup:**
-   ```bash
-   git clone <your-repo>
-   cd rhel_demo
-   ```
+---
 
-2. **Install dependencies:**
-   ```bash
-   sudo dnf install -y ansible podman nginx httpd mariadb-server firewalld
-   sudo systemctl enable --now firewalld
-   ```
+## 4 Deep dive 🔍
 
-3. **Run the demo:**
-   ```bash
-   ansible-playbook -i inventory/hosts playbook.yml
-   ```
+Detailed walk-through lives in [`docs/`](docs/) (design decisions, SELinux policy reasoning, troubleshooting cheatsheet & more).
 
-4. **Access the application:**
-   - Load Balancer: http://localhost
-   - Web Server: http://localhost:8080
-   - Database: localhost:3306
+---
 
-## Demo Components
+## 5 Roadmap 🛣️
 
-### 1. Ansible Playbooks
-- `playbook.yml` - Main deployment playbook
-- `roles/` - Modular Ansible roles for each component
-- `inventory/` - Host definitions and variables
+- [ ] Add Prometheus node-exporter + Grafana dashboard
+- [ ] Swap MariaDB for PostgreSQL and use roles/variables for DB engine choice
+- [ ] Extend to multiple web hosts and demo Ansible inventories/groups
+- [ ] CI pipeline that spins up the playbook in a container action
 
-### 2. Container Management
-- `containers/` - Podman container definitions
-- `systemd/` - systemd service files for containers
+---
 
-### 3. Security Configuration
-- `security/` - SELinux policies and firewalld rules
-- `templates/` - Configuration templates
+## 6 Contributing 🤝
 
-### 4. Monitoring
-- `monitoring/` - Basic monitoring setup with systemd
+PRs and issues welcome! Feel free to fork or raise suggestions – this repo is first and foremost a **learning playground**.
 
-## Learning Objectives
+---
 
-After completing this demo, you'll understand:
+## 7 License 📝
 
-✅ **Ansible Basics**
-- Playbook structure and syntax
-- Roles and tasks organization
-- Variable management
-- Conditionals and loops
-- Error handling
-
-✅ **Red Hat Container Strategy**
-- Podman vs Docker differences
-- Rootless containers
-- systemd integration
-- Container security
-
-✅ **RHEL Security**
-- firewalld zone management
-- SELinux context and policies
-- Service hardening
-- Security best practices
-
-✅ **System Administration**
-- systemd service management
-- Package management with dnf
-- Log management with journald
-- Performance monitoring
-
-## Next Steps
-
-1. **Customize the application** - Modify the web app or add new services
-2. **Add monitoring** - Integrate with Prometheus/Grafana
-3. **Implement CI/CD** - Add GitHub Actions or GitLab CI
-4. **Security hardening** - Apply additional security policies
-5. **Scaling** - Add more web servers behind the load balancer
-
-## Troubleshooting
-
-See the `troubleshooting.md` file for common issues and solutions.
-
-## Contributing
-
-Feel free to submit issues and enhancement requests! 
+MIT – do what you wish, credit appreciated. 
