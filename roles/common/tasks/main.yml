@@ -104,10 +104,11 @@
       timezone:
         name: UTC
     
-    - name: Configure locale
-      locale_gen:
-        name: en_US.UTF-8
-        state: present
+    - name: Configure locale for Fedora
+      command: localedef -c -f UTF-8 -i en_US en_US.UTF-8
+      args:
+        creates: /usr/lib/locale/en_US.utf8
+      when: ansible_distribution == "Fedora"
     
     - name: Set system locale
       lineinfile:
