@@ -14,6 +14,22 @@
     state: present
     update_cache: yes
 
+- name: Create Apache log directory
+  file:
+    path: /var/log/httpd
+    owner: apache
+    group: apache
+    mode: '0755'
+    state: directory
+
+- name: Create Apache run directory
+  file:
+    path: /var/run/httpd
+    owner: apache
+    group: apache
+    mode: '0755'
+    state: directory
+
 - name: Create web application directory
   file:
     path: /var/www/html/{{ app_name }}
