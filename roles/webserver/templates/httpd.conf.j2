@@ -23,6 +23,7 @@ Listen {{ web_port | default(8080) }}
         Options Indexes FollowSymLinks
         AllowOverride All
         Require all granted
+        DirectoryIndex index.php index.html
         
         # Security
         <Files "*.php">
@@ -35,10 +36,13 @@ Listen {{ web_port | default(8080) }}
         </FilesMatch>
     </Directory>
     
-    # PHP configuration
+    # PHP-FPM Configuration
     <FilesMatch \.php$>
-        SetHandler application/x-httpd-php
+        SetHandler "proxy:fcgi://127.0.0.1:9000"
     </FilesMatch>
+    
+    # Proxy configuration for PHP files
+    ProxyPassMatch ^/{{ app_name }}/(.*\.php)$ fcgi://127.0.0.1:9000/var/www/html/{{ app_name }}/$1
     
     # Performance
     EnableSendfile on
@@ -55,6 +59,7 @@ Listen {{ web_port | default(8080) }}
         AddOutputFilterByType DEFLATE application/rss+xml
         AddOutputFilterByType DEFLATE application/javascript
         AddOutputFilterByType DEFLATE application/x-javascript
+        AddOutputFilterByType DEFLATE application/json
     </IfModule>
     
     # Caching

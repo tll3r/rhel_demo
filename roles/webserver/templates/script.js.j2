@@ -54,7 +54,7 @@ function addLoadingAnimations() {
 
 async function loadSystemStatus() {
     try {
-        const response = await fetch('/{{ app_name }}/api.php/api/status');
+        const response = await fetch('/{{ app_name }}/api.php?endpoint=status');
         if (response.ok) {
             const data = await response.json();
             displaySystemStatus(data);
@@ -136,7 +136,7 @@ function displayError(message) {
 
 async function updateMetrics() {
     try {
-        const response = await fetch('/{{ app_name }}/api.php/api/status');
+        const response = await fetch('/{{ app_name }}/api.php?endpoint=status');
         if (response.ok) {
             const data = await response.json();
             updateMetricDisplay(data.system);

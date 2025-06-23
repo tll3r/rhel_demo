@@ -64,23 +64,10 @@
     mode: '0644'
   notify: restart httpd
 
-- name: Configure PHP-FPM with Apache (Fedora)
-  copy:
-    dest: /etc/httpd/conf.d/php.conf
-    content: |
-      # PHP-FPM Configuration for Fedora
-      DirectoryIndex index.html index.php
-      
-      # PHP-FPM Handler with correct syntax
-      <FilesMatch \.php$>
-          SetHandler "proxy:fcgi://127.0.0.1:9000"
-      </FilesMatch>
-      
-      # Proxy configuration for PHP files
-      ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/var/www/html/rhel-demo-app/$1
-    owner: root
-    group: root
-    mode: '0644'
+- name: Remove conflicting PHP configuration
+  file:
+    path: /etc/httpd/conf.d/php.conf
+    state: absent
   notify: restart httpd
 
 - name: Install and configure PHP-FPM for Fedora

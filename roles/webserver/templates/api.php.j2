@@ -7,34 +7,29 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Get request method and path
+// Get request method and endpoint
 $method = $_SERVER['REQUEST_METHOD'];
-$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$path_parts = explode('/', trim($path, '/'));
+$endpoint = $_GET['endpoint'] ?? 'status';
 
 // API endpoints
 switch ($method) {
     case 'GET':
-        if (isset($path_parts[1]) && $path_parts[1] === 'api') {
-            $endpoint = $path_parts[2] ?? 'status';
-            
-            switch ($endpoint) {
-                case 'status':
-                    getSystemStatus();
-                    break;
-                case 'users':
-                    getUsers();
-                    break;
-                case 'posts':
-                    getPosts();
-                    break;
-                case 'system':
-                    getSystemInfo();
-                    break;
-                default:
-                    http_response_code(404);
-                    echo json_encode(['error' => 'Endpoint not found']);
-            }
+        switch ($endpoint) {
+            case 'status':
+                getSystemStatus();
+                break;
+            case 'users':
+                getUsers();
+                break;
+            case 'posts':
+                getPosts();
+                break;
+            case 'system':
+                getSystemInfo();
+                break;
+            default:
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found']);
         }
         break;
         
