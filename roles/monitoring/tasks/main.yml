@@ -151,7 +151,7 @@
 
 - name: Test monitoring endpoint
   uri:
-    url: "http://localhost:{{ web_port }}/{{ app_name }}/api/monitoring.php"
+    url: "http://localhost:{{ web_port }}/api/monitoring.php"
     method: GET
     status_code: 200
   register: monitoring_test
