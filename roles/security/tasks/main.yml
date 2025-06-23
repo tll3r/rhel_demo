@@ -58,7 +58,7 @@
       register: selinux_status
       changed_when: false
     
-    - name: Set SELinux mode
+    - name: Set SELinux booleans (Fedora compatible)
       seboolean:
         name: "{{ item }}"
         state: yes
@@ -66,7 +66,6 @@
       loop:
         - httpd_can_network_connect
         - httpd_can_network_connect_db
-        - httpd_exec_mem
         - httpd_setrlimit
         - httpd_ssi_exec
         - httpd_tty_comm
@@ -79,6 +78,7 @@
         - use_nfs_home_dirs
         - use_samba_home_dirs
       when: selinux_status.stdout == "Enforcing"
+      ignore_errors: yes
     
     - name: Create SELinux policy for application
       template:
@@ -92,12 +92,14 @@
       args:
         chdir: /tmp
       when: selinux_status.stdout == "Enforcing"
+      ignore_errors: yes
     
     - name: Install SELinux policy
       command: semodule -i rhel-demo.pp
       args:
         chdir: /tmp
       when: selinux_status.stdout == "Enforcing"
+      ignore_errors: yes
 
 - name: Configure system security
   block:
