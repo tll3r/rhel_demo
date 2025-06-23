@@ -96,7 +96,7 @@ function displaySystemStatus(data) {
                 ${Object.entries(data.services).map(([service, info]) => `
                     <div class="service-item">
                         <strong>${service}:</strong> 
-                        <span class="status-${info.status === 'active' ? 'ok' : 'warning'}">
+                        <span class="status-${info.status === 'running' ? 'ok' : 'warning'}">
                             ${info.status}
                         </span>
                     </div>

@@ -97,7 +97,7 @@ function checkServices() {
 
     $services['apache']  = ['status' => $processExists('httpd')   ? 'running' : 'stopped'];
     $services['nginx']   = ['status' => $processExists('nginx')   ? 'running' : 'stopped'];
-    $services['mariadb'] = ['status' => $processExists('mysqld')  ? 'running' : 'stopped'];
+    $services['mariadb'] = ['status' => ($processExists('mariadbd') || $processExists('mysqld')) ? 'running' : 'stopped'];
     
     return $services;
 }
