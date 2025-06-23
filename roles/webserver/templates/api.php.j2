@@ -85,20 +85,19 @@ function checkDatabaseConnection() {
 function checkServices() {
     $services = [];
     
-    // Helper closure
-    $detect = function($unit, $processName) {
-        $status = trim(shell_exec("systemctl is-active $unit 2>/dev/null"));
-        if ($status === '' || $status === 'unknown') {
-            // Fallback: check if process is running
-            $pid = trim(shell_exec("pgrep -x $processName"));
-            $status = $pid !== '' ? 'running' : 'stopped';
+    $processExists = function($needle) {
+        foreach (glob('/proc/[0-9]*/comm') as $commFile) {
+            $name = trim(@file_get_contents($commFile));
+            if ($name === $needle) {
+                return true;
+            }
         }
-        return $status;
+        return false;
     };
-    
-    $services['apache']  = ['status' => $detect('httpd','httpd')];
-    $services['nginx']   = ['status' => $detect('nginx','nginx')];
-    $services['mariadb'] = ['status' => $detect('mariadb','mysqld')];
+
+    $services['apache']  = ['status' => $processExists('httpd')   ? 'running' : 'stopped'];
+    $services['nginx']   = ['status' => $processExists('nginx')   ? 'running' : 'stopped'];
+    $services['mariadb'] = ['status' => $processExists('mysqld')  ? 'running' : 'stopped'];
     
     return $services;
 }
