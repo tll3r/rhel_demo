@@ -98,6 +98,15 @@
     - "INSERT IGNORE INTO posts (user_id, title, content) VALUES (1, 'Welcome to Red Hat Demo', 'This is a demo post showcasing Red Hat tools and technologies.');"
     - "INSERT IGNORE INTO posts (user_id, title, content) VALUES (2, 'Ansible Automation', 'Learn how Ansible can automate your infrastructure deployment.');"
 
+- name: Create backup directory
+  file:
+    path: /opt/{{ app_name }}/scripts
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+  when: enable_backup | default(true)
+
 - name: Configure MariaDB backup
   template:
     src: backup.sh.j2
@@ -105,6 +114,7 @@
     owner: root
     group: root
     mode: '0755'
+  when: enable_backup | default(true)
 
 - name: Create backup cron job
   cron:
@@ -113,6 +123,7 @@
     minute: "0"
     job: "/opt/{{ app_name }}/scripts/backup_mysql.sh"
     state: present
+  when: enable_backup | default(true)
 
 - name: Configure MariaDB monitoring
   template:

@@ -103,7 +103,7 @@
     - name: Set timezone
       timezone:
         name: UTC
-  # aaaa  
+  # aaaafix  
     - name: Install locale packages for Fedora
       dnf:
         name:
