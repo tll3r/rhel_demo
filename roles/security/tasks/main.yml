@@ -49,7 +49,7 @@
         immediate: yes
       loop:
         - "rule family=ipv4 source address=127.0.0.1 accept"
-        - "rule family=ipv4 source address=::1 accept"
+        - "rule family=ipv6 source address=::1 accept"
 
 - name: Configure SELinux
   block:
