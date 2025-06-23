@@ -48,6 +48,14 @@
   command: restorecon -Rv /var/log/nginx/{{ app_name }}
   when: ansible_selinux.status == "enabled"
 
+- name: Allow Nginx to bind to custom port in SELinux
+  command: semanage port -a -t http_port_t -p tcp {{ lb_port }}
+  register: selinux_port_result
+  failed_when: 
+    - selinux_port_result.rc != 0
+    - "'already defined' not in selinux_port_result.stderr"
+  when: ansible_selinux.status == "enabled"
+
 - name: Start and enable Nginx
   systemd:
     name: nginx
