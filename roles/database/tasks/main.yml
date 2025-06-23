@@ -49,45 +49,10 @@
     delay: 10
     timeout: 60
 
-- name: Check if MariaDB root user has password
-  mysql_user:
-    login_user: root
-    login_password: ""
-    name: root
-    host: "localhost"
-    state: present
-  register: root_user_check
+- name: Set root password using mysql command
+  command: mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password | default('RedHatDemo123!') }}';"
+  register: set_root_password
   ignore_errors: yes
-
-- name: Set root password if not set
-  mysql_user:
-    login_user: root
-    login_password: ""
-    name: root
-    host: "{{ item }}"
-    password: "{{ mysql_root_password | default('RedHatDemo123!') }}"
-    priv: "*.*:ALL,GRANT"
-    state: present
-  loop:
-    - "localhost"
-    - "127.0.0.1"
-    - "::1"
-  when: root_user_check is failed
-
-- name: Secure MariaDB installation (if root password already set)
-  mysql_user:
-    login_user: root
-    login_password: "{{ mysql_root_password | default('RedHatDemo123!') }}"
-    name: root
-    host: "{{ item }}"
-    password: "{{ mysql_root_password | default('RedHatDemo123!') }}"
-    priv: "*.*:ALL,GRANT"
-    state: present
-  loop:
-    - "localhost"
-    - "127.0.0.1"
-    - "::1"
-  when: root_user_check is not failed
 
 - name: Create application database
   mysql_db:
