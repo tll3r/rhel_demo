@@ -24,6 +24,24 @@
         dest: /var/www/html/{{ app_name }}/health.php
         mode: '0644'
 
+    - name: "[CONTAINER] Stop native Apache service if running"
+      systemd:
+        name: httpd
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: "[CONTAINER] Remove native Apache packages to free port {{ web_port }}"
+      dnf:
+        name:
+          - httpd
+          - httpd-tools
+          - mod_ssl
+          - php
+          - php-fpm
+        state: absent
+      ignore_errors: yes
+
     - name: "[CONTAINER] Run Apache + PHP container"
       containers.podman.podman_container:
         name: httpd

@@ -6,12 +6,28 @@
         state: directory
         mode: '0755'
 
+    - name: "[CONTAINER] Stop native MariaDB service if running"
+      systemd:
+        name: mariadb
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: "[CONTAINER] Remove native MariaDB packages to free port 3306"
+      dnf:
+        name:
+          - mariadb-server
+          - mariadb
+        state: absent
+      ignore_errors: yes
+
     - name: "[CONTAINER] Run MariaDB container"
       containers.podman.podman_container:
         name: mariadb
         image: docker.io/library/mariadb:10.5
         state: started
         restart_policy: always
+        replace: yes
         env:
           MYSQL_ROOT_PASSWORD: "{{ mysql_root_password | default('RedHatDemo123!') }}"
           MYSQL_DATABASE: "{{ app_name }}"

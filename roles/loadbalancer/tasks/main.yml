@@ -30,6 +30,21 @@
         group: root
         mode: '0644'
 
+    - name: "[CONTAINER] Stop native Nginx service if running"
+      systemd:
+        name: nginx
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: "[CONTAINER] Remove native Nginx packages to free port {{ lb_port }}"
+      dnf:
+        name:
+          - nginx
+          - nginx-mod-stream
+        state: absent
+      ignore_errors: yes
+
     - name: "[CONTAINER] Run Nginx load-balancer with Podman"
       containers.podman.podman_container:
         name: nginx-lb
