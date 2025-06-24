@@ -27,7 +27,7 @@
         image: docker.io/library/mariadb:10.5
         state: started
         restart_policy: always
-        replace: yes
+        recreate: yes
         env:
           MYSQL_ROOT_PASSWORD: "{{ mysql_root_password | default('RedHatDemo123!') }}"
           MYSQL_DATABASE: "{{ app_name }}"

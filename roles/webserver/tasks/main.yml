@@ -48,6 +48,7 @@
         image: docker.io/library/php:8.2-apache
         state: started
         restart_policy: always
+        recreate: yes
         ports:
           - "{{ web_port }}:80"
         volumes:

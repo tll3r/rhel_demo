@@ -51,6 +51,7 @@
         image: docker.io/library/nginx:1.20
         state: started
         restart_policy: always
+        recreate: yes
         ports:
           - "{{ lb_port }}:80"
         volumes:
