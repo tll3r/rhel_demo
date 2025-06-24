@@ -1,4 +1,31 @@
 ---
+- block:
+    - name: "[CONTAINER] Ensure database data directory exists"
+      file:
+        path: /opt/{{ app_name }}/db_data
+        state: directory
+        mode: '0755'
+
+    - name: "[CONTAINER] Run MariaDB container"
+      containers.podman.podman_container:
+        name: mariadb
+        image: docker.io/library/mariadb:10.5
+        state: started
+        restart_policy: always
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mysql_root_password | default('RedHatDemo123!') }}"
+          MYSQL_DATABASE: "{{ app_name }}"
+          MYSQL_USER: "{{ app_name }}"
+          MYSQL_PASSWORD: "{{ mysql_app_password | default('AppDemo123!') }}"
+        ports:
+          - "{{ db_port }}:3306"
+        volumes:
+          - /opt/{{ app_name }}/db_data:/var/lib/mysql:Z
+  when: use_podman_containers | default(false)
+
+- meta: end_host
+  when: use_podman_containers | default(false)
+
 - name: Install MariaDB server and client
   dnf:
     name:
@@ -141,4 +168,31 @@
     password: "{{ mysql_monitor_password | default('Monitor123!') }}"
     priv: "*.*:SELECT,PROCESS,REPLICATION CLIENT"
     host: "localhost"
-    state: present 
+    state: present
+
+- block:
+    - name: "[CONTAINER] Ensure database data directory exists"
+      file:
+        path: /opt/{{ app_name }}/db_data
+        state: directory
+        mode: '0755'
+
+    - name: "[CONTAINER] Run MariaDB container"
+      containers.podman.podman_container:
+        name: mariadb
+        image: docker.io/library/mariadb:10.5
+        state: started
+        restart_policy: always
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mysql_root_password | default('RedHatDemo123!') }}"
+          MYSQL_DATABASE: "{{ app_name }}"
+          MYSQL_USER: "{{ app_name }}"
+          MYSQL_PASSWORD: "{{ mysql_app_password | default('AppDemo123!') }}"
+        ports:
+          - "{{ db_port }}:3306"
+        volumes:
+          - /opt/{{ app_name }}/db_data:/var/lib/mysql:Z
+  when: use_podman_containers | default(false)
+
+- meta: end_host
+  when: use_podman_containers | default(false) 

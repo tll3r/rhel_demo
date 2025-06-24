@@ -1,4 +1,52 @@
 ---
+- block:
+    - name: "[CONTAINER] Ensure Nginx configuration directory exists"
+      file:
+        path: /etc/nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: "[CONTAINER] Render Nginx main configuration"
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "[CONTAINER] Render Nginx virtual host configuration"
+      template:
+        src: default.conf.j2
+        dest: /etc/nginx/conf.d/{{ app_name }}.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "[CONTAINER] Copy health check file"
+      template:
+        src: health.html.j2
+        dest: /usr/share/nginx/html/health.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "[CONTAINER] Run Nginx load-balancer with Podman"
+      containers.podman.podman_container:
+        name: nginx-lb
+        image: docker.io/library/nginx:1.20
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ lb_port }}:80"
+        volumes:
+          - /etc/nginx:/etc/nginx:Z
+          - /usr/share/nginx/html:/usr/share/nginx/html:Z
+          - /var/log/nginx:/var/log/nginx:Z
+  when: use_podman_containers | default(false)
+
+- meta: end_host
+  when: use_podman_containers | default(false)
+
 - name: Install Nginx
   dnf:
     name:
@@ -83,14 +131,6 @@
     dest: /etc/logrotate.d/{{ app_name }}-nginx
     owner: root
     group: root
-    mode: '0644'
-
-- name: Create health check for Nginx
-  template:
-    src: health.html.j2
-    dest: /usr/share/nginx/html/health.html
-    owner: nginx
-    group: nginx
     mode: '0644'
 
 - name: Test Nginx configuration

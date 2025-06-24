@@ -1,4 +1,44 @@
 ---
+- block:
+    - name: "[CONTAINER] Ensure web application directory exists"
+      file:
+        path: /var/www/html/{{ app_name }}
+        state: directory
+        mode: '0755'
+
+    - name: "[CONTAINER] Deploy web application files"
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode | default('0644') }}"
+      loop:
+        - { src: 'index.php.j2', dest: '/var/www/html/{{ app_name }}/index.php' }
+        - { src: 'config.php.j2', dest: '/var/www/html/{{ app_name }}/config.php' }
+        - { src: 'api.php.j2', dest: '/var/www/html/{{ app_name }}/api.php' }
+        - { src: 'style.css.j2', dest: '/var/www/html/{{ app_name }}/style.css' }
+        - { src: 'script.js.j2', dest: '/var/www/html/{{ app_name }}/script.js' }
+
+    - name: "[CONTAINER] Deploy health endpoint"
+      template:
+        src: health.php.j2
+        dest: /var/www/html/{{ app_name }}/health.php
+        mode: '0644'
+
+    - name: "[CONTAINER] Run Apache + PHP container"
+      containers.podman.podman_container:
+        name: httpd
+        image: docker.io/library/php:8.2-apache
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ web_port }}:80"
+        volumes:
+          - /var/www/html/{{ app_name }}:/var/www/html:Z
+  when: use_podman_containers | default(false)
+
+- meta: end_host
+  when: use_podman_containers | default(false)
+
 - name: Install Apache HTTPD and PHP
   dnf:
     name:
@@ -97,22 +137,6 @@
     - php-fpm
     - httpd
 
-
-
-- name: Create web application files
-  template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: apache
-    group: apache
-    mode: "{{ item.mode | default('0644') }}"
-  loop:
-    - { src: 'index.php.j2', dest: '/var/www/html/{{ app_name }}/index.php' }
-    - { src: 'config.php.j2', dest: '/var/www/html/{{ app_name }}/config.php' }
-    - { src: 'api.php.j2', dest: '/var/www/html/{{ app_name }}/api.php' }
-    - { src: 'style.css.j2', dest: '/var/www/html/{{ app_name }}/style.css' }
-    - { src: 'script.js.j2', dest: '/var/www/html/{{ app_name }}/script.js' }
-
 - name: Create systemd service for web application
   template:
     src: httpd-app.service.j2
@@ -161,14 +185,6 @@
     dest: /etc/logrotate.d/{{ app_name }}-web
     owner: root
     group: root
-    mode: '0644'
-
-- name: Create health check endpoint
-  template:
-    src: health.php.j2
-    dest: /var/www/html/{{ app_name }}/health.php
-    owner: apache
-    group: apache
     mode: '0644'
 
 - name: Test web application
