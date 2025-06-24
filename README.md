@@ -1,5 +1,7 @@
 # Red Hat Tools Demo 🚀
 
+*Built with **vibe coding** &mdash; this project is still a work&nbsp;in&nbsp;progress.*
+
 > **TL;DR (60 sec read)**  
 > *Automated multi-tier application deployed with one command.*  
 > Uses **Ansible** to configure **Nginx**, **Apache HTTPD** and **MariaDB** – **all running in root-less Podman containers** – plus system hardening (SELinux, firewalld) **and** a live dashboard.  
