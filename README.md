@@ -2,7 +2,7 @@
 
 > **TL;DR (60 sec read)**  
 > *Automated multi-tier application deployed with one command.*  
-> Uses **Ansible** to configure **Nginx** (load-balancer :8000), **Apache HTTPD** :8080, **MariaDB** :3306, system hardening (SELinux, firewalld) **and** a live dashboard – all on vanilla Fedora/RHEL.  
+> Uses **Ansible** to configure **Nginx**, **Apache HTTPD** and **MariaDB** – **all running in root-less Podman containers** – plus system hardening (SELinux, firewalld) **and** a live dashboard.  
 > Clone → `ansible-playbook playbook.yml` → open <http://localhost:8080> and watch the status cards turn green.
 
 ---
@@ -28,9 +28,9 @@ Everything is reproducible – wipe the VM, run the playbook again, get the exac
 
 | Tier | Component | Purpose |
 |------|-----------|---------|
-| Load Balancer | **Nginx** `:8000` | SSL termination & simple round-robin (future multi-web support) |
-| Application | **Apache HTTPD + PHP-FPM** `:8080` | Serves a micro PHP dashboard & REST API |
-| Database | **MariaDB** `:3306` | Persists demo data |
+| Load Balancer | **Nginx (container)** `:8000` | SSL termination & simple round-robin |
+| Application | **Apache HTTPD + PHP-FPM (container)** `:8080` | Serves a micro PHP dashboard & REST API |
+| Database | **MariaDB (container)** `:{{ db_port \| default(3306) }}` | Persists demo data |
 | Monitoring | **Custom dashboard + system scripts** | Live CPU/Memory/Disk, service health |
 | Automation | **Ansible** | One-click provisioning on Fedora/RHEL |
 | Security | **SELinux / firewalld** | Enforced, no ports left open by accident |
@@ -73,7 +73,7 @@ $ git clone https://github.com/<your-fork>/rhel_demo.git
 $ cd rhel_demo
 
 # Install deps (Fedora example)
-$ sudo dnf install -y ansible-core podman httpd nginx mariadb-server jq
+$ sudo dnf install -y ansible-core podman jq
 
 # Inventory already points to localhost
 $ ansible-playbook -i inventory/hosts playbook.yml
@@ -87,9 +87,11 @@ When the page loads you should quickly see *System Status* cards flash green.
 ### 3.3 Tearing down / resetting
 
 ```bash
-$ sudo systemctl stop nginx httpd mariadb
-$ sudo dnf remove -y nginx httpd mariadb-server
-$ sudo rm -rf /var/www/html/rhel-demo-app /opt/rhel-demo-app /var/log/rhel-demo-app
+# Stop & remove containers
+$ podman stop nginx-lb httpd mariadb || true
+$ podman rm nginx-lb httpd mariadb || true
+# Remove volumes/directories created by the demo
+$ sudo rm -rf /opt/rhel-demo-app /var/www/html/rhel-demo-app /opt/rhel-demo-app/db_data
 ```
 
 ---
